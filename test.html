@@ -9,12 +9,16 @@
 
         window.onload = function() {
             window.mod = Module();
+
+            window.getMT63SampleRate = mod.cwrap('getSampleRate', 'number');
+            window.getMT63Buffer = mod.cwrap('getBuffer', 'number');
+            window.encodeMT63 = mod.cwrap('encodeString', 'number', ['string', 'number', 'number']);
         };
 
         function sendMessage(str) {
-            var sampleRate = mod._getSampleRate();
-            var length = mod._encodeString(str, 2000, 1);
-            var srcPtr = mod._getBuffer();
+            var sampleRate = getMT63SampleRate();
+            var length = encodeMT63(str, 2000, 1);
+            var srcPtr = getMT63Buffer();
 
             var srcData = mod.HEAPF32.subarray(srcPtr/4, srcPtr/4 + length);
 
