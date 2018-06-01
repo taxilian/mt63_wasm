@@ -31,6 +31,8 @@
 #ifndef MT63BASE_H
 #define MT63BASE_H
 
+#include "dsp.h"
+
 // ==========================================================================
 // Character encoder and block interleaver for the MT63 modem
 /*
