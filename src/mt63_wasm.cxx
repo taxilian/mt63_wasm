@@ -3,13 +3,17 @@
 #include <stdio.h>
 #include <memory>
 
-const auto TONE_AMP = 0.8;
-const auto k_SAMPLERATE = 8000;
-const auto k_BUFFERSECONDS = 600;
-const auto k_BUFFER_MAX_SIZE = k_SAMPLERATE*k_BUFFERSECONDS; // 8000Hz sample rate, 600 seconds (10 minutes)
+using BufferType = float;
+
+const double txLevel = -3.0;
+const double SIGLIMIT = 0.95;
+
+#define TONE_AMP 0.8
+#define k_SAMPLERATE 8000
+#define k_BUFFERSECONDS 600
+#define k_BUFFER_MAX_SIZE k_SAMPLERATE * k_BUFFERSECONDS // 8000Hz sample rate, 600 seconds (10 minutes)
 const auto CenterFreq = 1500;
-// float buffer[k_BUFFER_MAX_SIZE];
-std::unique_ptr<float> buffer(new float[k_BUFFER_MAX_SIZE]);
+std::unique_ptr<BufferType> buffer(new BufferType[k_BUFFER_MAX_SIZE]);
 unsigned int bufferSize = 0;
 MT63tx Tx;
 
@@ -25,8 +29,19 @@ void flushToBuffer(MT63tx *Tx) {
         printf("Refusing to overrun the buffer!");
         return;
     }
+    double maxVal = 0.0;
     for (auto i = 0; i < Tx->Comb.Output.Len; ++i) {
-        lBuffer[bufferSize++] = static_cast<float>(Tx->Comb.Output.Data[i]);
+        auto a = fabs(Tx->Comb.Output.Data[i]);
+        if (a > maxVal) { maxVal = a; }
+    }
+    // maxVal = 1.0;
+    double mult = pow(10, txLevel / 20);
+    if (mult > SIGLIMIT) { mult = SIGLIMIT; }
+    for (auto i = 0; i < Tx->Comb.Output.Len; ++i) {
+        auto val = Tx->Comb.Output.Data[i] * 1.0 / maxVal * mult;
+        if (val > SIGLIMIT) val = SIGLIMIT;
+        if (val < -SIGLIMIT) val = -SIGLIMIT;
+        lBuffer[bufferSize++] = static_cast<BufferType>(val);
     }
 }
 void interleaveFlush(MT63tx *Tx) {
@@ -74,7 +89,6 @@ extern "C" {
 
         Tx.Preset(1500, bandwidth, interleave);
         sendTone(&Tx, 2, bandwidth);
-        flushToBuffer(&Tx);
         interleaveFlush(&Tx);
 
         for (auto cur = inStr; *cur != NULL; ++cur) {
@@ -86,10 +100,14 @@ extern "C" {
         Tx.SendJam();
         interleaveFlush(&Tx);
 
+        Tx.SendSilence();
+        interleaveFlush(&Tx);
+
+
         return bufferSize;
     }
 
-    float* getBuffer() {
+    BufferType* getBuffer() {
         return buffer.get();
     }
 
