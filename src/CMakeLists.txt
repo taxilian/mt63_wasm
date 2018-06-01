@@ -8,7 +8,7 @@ project(mt63Wasm)
 set(HAVE_STDLIB_H 1 cache)
 set(HAVE_STDDEF_H 1 cache)
 
-set(LIB_EXPORTS "['init', 'encodeAudio']")
+set(LIB_EXPORTS "['_getSampleRate', '_encodeString', '_getBuffer']")
 if (NOT BUILD_ASMJS)
     set (DEFAULT_CFLAGS "-s WASM=1 -s \"BINARYEN_METHOD='native-wasm'\" -O3 -s \"BINARYEN_TRAP_MODE='clamp'\" -s MODULARIZE=1 -Wno-deprecated-register -Wno-warn-absolute-paths -s NO_EXIT_RUNTIME=1 -flto -ftree-vectorize -s ALLOW_MEMORY_GROWTH=1 -s PRECISE_F32=1 --emit-symbol-map -Werror -s EXPORTED_FUNCTIONS=\"${LIB_EXPORTS}\"")
     set (DEBUG_CFLAGS "-s WASM=1 -s \"BINARYEN_METHOD='native-wasm'\" -O3 --minify 0 -s \"BINARYEN_TRAP_MODE='clamp'\" -s MODULARIZE=1 -Wno-deprecated-register -Wno-warn-absolute-paths -s NO_EXIT_RUNTIME=1 -flto -ftree-vectorize -s ALLOW_MEMORY_GROWTH=1 -s PRECISE_F32=1 --emit-symbol-map -Werror -s EXPORTED_FUNCTIONS=\"${LIB_EXPORTS}\"")
@@ -20,11 +20,12 @@ else()
 endif()
 
 
-set(EMCC_FLAGS  "${DEFAULT_CFLAGS}")
-# set(EMCC_FLAGS  "${DEBUG_CFLAGS}")
-set(EMCXX_FLAGS "-std=c++11 ${DEFAULT_CFLAGS}")
-# set(EMCXX_FLAGS "-std=c++11 ${DEBUG_CFLAGS}")
+# set(EMCC_FLAGS  "${DEFAULT_CFLAGS}")
+set(EMCC_FLAGS  "${DEBUG_CFLAGS}")
+# set(EMCXX_FLAGS "-std=c++11 ${DEFAULT_CFLAGS}")
+set(EMCXX_FLAGS "-std=c++11 ${DEBUG_CFLAGS}")
 
+message("Using cflags: ${EMCC_FLAGS}")
 message("Using system include dir(s): ${CMAKE_SYSTEM_INCLUDE_PATH}")
 
 set(CMAKE_C_FLAGS ${EMCC_FLAGS})

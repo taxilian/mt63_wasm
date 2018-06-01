@@ -1,0 +1,35 @@
+<html>
+<head>
+<title>Test Page!</title>
+    <script src="./libmt63Wasm.js"></script>
+
+    <script type="text/javascript">
+    
+        var audioCtx = new (window.AudioContext || window.webkitAudioContext)();
+
+        window.onload = function() {
+            window.mod = Module();
+        };
+
+        function sendMessage(str) {
+            var sampleRate = mod._getSampleRate();
+            var length = mod._encodeString(str, 2000, 1);
+            var srcPtr = mod._getBuffer();
+
+            var srcData = mod.HEAPF32.subarray(srcPtr/4, srcPtr/4 + length);
+
+            var buffer = audioCtx.createBuffer(1, length, sampleRate);
+            buffer.copyToChannel(srcData, 0);
+
+            var source = audioCtx.createBufferSource();
+            source.buffer = buffer;
+            source.connect(audioCtx.destination);
+            source.start();
+        }
+
+    </script>
+</head>
+<body>
+    This is a test!
+</body>
+</html>
