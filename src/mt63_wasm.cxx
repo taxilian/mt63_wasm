@@ -5,7 +5,7 @@
 
 using BufferType = float;
 
-const double txLevel = -3.0;
+const double txLevel = -6.0;
 const double SIGLIMIT = 0.95;
 
 #define TONE_AMP 0.8
@@ -21,7 +21,7 @@ void resetBuffer() {
     buffer.get()[0] = 0;
     bufferSize = 0;
 }
-void flushToBuffer(MT63tx *Tx) {
+void flushToBuffer(MT63tx *Tx, double mult = 1.0) {
     auto lBuffer = buffer.get();
     if (bufferSize + Tx->Comb.Output.Len > k_BUFFER_MAX_SIZE) {
         // This is not good! We will overflow the buffer.
@@ -35,7 +35,6 @@ void flushToBuffer(MT63tx *Tx) {
         if (a > maxVal) { maxVal = a; }
     }
     // maxVal = 1.0;
-    double mult = pow(10, txLevel / 20);
     if (mult > SIGLIMIT) { mult = SIGLIMIT; }
     for (auto i = 0; i < Tx->Comb.Output.Len; ++i) {
         auto val = Tx->Comb.Output.Data[i] * 1.0 / maxVal * mult;
@@ -70,6 +69,9 @@ void sendTone(MT63tx *Tx, int seconds, int bandwidth) {
                 lBuffer[bufferSize-1] *= (1.0 - exp(-1.0 * (samplerate - j) / 40.0));
         }
     }
+    for (auto i = 0; i < Tx->DataInterleave; ++i) {
+        Tx->SendChar(0);
+    }
 }
 
 extern "C" {
@@ -87,21 +89,38 @@ extern "C" {
         }
         resetBuffer();
 
+        double mult = pow(10, txLevel / 20);
+        printf("Using txlevel multiplier of %f\n", mult);
+
         Tx.Preset(1500, bandwidth, interleave);
         sendTone(&Tx, 2, bandwidth);
-        interleaveFlush(&Tx);
+        // Tx.SendTune(true);
+        // flushToBuffer(&Tx);
+        // Tx.SendTune(true);
+        // flushToBuffer(&Tx);
+        // Tx.SendTune(true);
+        // flushToBuffer(&Tx);
 
+        // interleaveFlush(&Tx);
+
+        printf("Sending string: %s\n", inStr);
         for (auto cur = inStr; *cur != NULL; ++cur) {
+            unsigned char c = *cur;
+            if (c > 127) {
+                c &= 127;
+                Tx.SendChar(127);
+                flushToBuffer(&Tx);
+            }
             Tx.SendChar(*cur);
             flushToBuffer(&Tx);
         }
         interleaveFlush(&Tx);
 
         Tx.SendJam();
-        interleaveFlush(&Tx);
+        flushToBuffer(&Tx);
 
-        Tx.SendSilence();
-        interleaveFlush(&Tx);
+        // Tx.SendSilence();
+        // interleaveFlush(&Tx);
 
 
         return bufferSize;
