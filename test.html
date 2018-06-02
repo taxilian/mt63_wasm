@@ -13,7 +13,34 @@
             window.getMT63SampleRate = mod.cwrap('getSampleRate', 'number');
             window.getMT63Buffer = mod.cwrap('getBuffer', 'number');
             window.encodeMT63 = mod.cwrap('encodeString', 'number', ['string', 'number', 'number']);
+
+            polyfill();
         };
+
+        function polyfill() {
+            if (AudioBuffer.prototype.hasOwnProperty("copyToChannel")) {
+                return;
+            }
+
+            //// ### AudioBuffer.prototype.copyToChannel
+            //// The `copyToChannel` method copies the samples to the specified channel of the **`AudioBuffer`**, from the `source` array.
+            ////
+            //// #### Parameters
+            //// - `source: Float32Array`
+            ////   - The array the channel data will be copied from.
+            //// - `channelNumber: number`
+            ////   - The index of the channel to copy the data to.
+            //// - `startInChannel: number = 0`
+            ////   - An optional offset to copy the data to.
+            ////
+            //// #### Return
+            //// - `void`
+            AudioBuffer.prototype.copyToChannel = function(source, channelNumber, startInChannel) {
+                let clipped = source.subarray(0, Math.min(source.length, this.length - (startInChannel|0)));
+
+                this.getChannelData(channelNumber|0).set(clipped, startInChannel|0);
+            };            
+        }
 
         function sendMessage(str) {
             var sampleRate = getMT63SampleRate();
@@ -22,10 +49,11 @@
 
             var srcData = mod.HEAPF32.subarray(srcPtr/4, srcPtr/4 + length);
 
-            var buffer = audioCtx.createBuffer(1, length, sampleRate);
+            var buffer = audioCtx.createBuffer(1, length, sampleRate*3);
             buffer.copyToChannel(srcData, 0);
 
             var source = audioCtx.createBufferSource();
+            source.playbackRate.value = 1/3;
             source.buffer = buffer;
             source.connect(audioCtx.destination);
             source.start();
