@@ -32,7 +32,7 @@ Open http://localhost:8080 in your browser, open a console, and run `sendMessage
 
 # Status
 
-Currently sound is being generated but it's not working yet -- unless we fixed it and forgot to update this document, which is very possible.
+Currently sound is being generated and can be de-encoded in FLDIGI! For mobile browsers that cannot play at a sample rate of 8000 Hz we've played a 3 to 1 trick telling AudioContext that the buffer is at 24KHz but to play it back at 1/3 speed.
 
 # Shameless plugs
 
