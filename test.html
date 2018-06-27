@@ -3,10 +3,9 @@
 <title>Test Page!</title>
 <meta name="viewport" content="user-scalable=no, initial-scale=1.0, minimum-scale=1.0, maximum-scale=1.0" />
     <script src="./libmt63Wasm.js"></script>
-
+    <script src="resampler.js"></script>
     <script type="text/javascript">
     
-
         window.onload = function() {
             window.mod = Module();
 
@@ -25,6 +24,11 @@
         };
 
         function polyfill() {
+            navigator.getUserMedia = (navigator.getUserMedia ||
+                          navigator.webkitGetUserMedia ||
+                          navigator.mozGetUserMedia ||
+                          navigator.msGetUserMedia);
+
             if (AudioBuffer.prototype.hasOwnProperty("copyToChannel")) {
                 return;
             }
@@ -65,6 +69,38 @@
             source.buffer = buffer;
             source.connect(audioCtx.destination);
             source.start();
+        }
+
+        function startListening() {
+           // TODO(smus): Remove this ugliness.
+            var isLocalhost = window.location.hostname == 'localhost' ||
+                window.location.hostname == '127.0.0.1';
+            if (window.location.protocol != 'https:' && !isLocalhost) {
+                alert('HTTPS is required for microphone access, and this site has no SSL cert yet. Sorry!');
+            }
+            navigator.getUserMedia({audio: true}, startStream, streamError);
+        }
+
+        function startStream(stream) {
+            var context = new (window.AudioContext || window.webkitAudioContext)();
+
+            let scriptProc = context.createScriptProcessor(8192, 1, 1);
+            scriptProc.onAudioProcess = function(aEvt) {
+                let inpBuffer = aEvt.inputBuffer;
+                let ReSamp = new Resampler(inpBuffer.sampleRate, 8000, 1, inpBuffer);
+
+                let newLen = ReSamp.resampler(inpBuffer.length);
+                let newBuff = ReSamp.outputBuffer;
+                console.log(newBuff);
+            };
+
+            stream.connect(scriptProc);
+            stream.start();
+        }
+
+        function streamError(err) {
+            console.warn(err);
+            alert("Error!", err);
         }
 
     </script>
