@@ -1,6 +1,6 @@
 CACHE MANIFEST
 # This should hopefully make it possible to use this offline on an ios or android device
-# Cache manifest version 0.0.1
+# Cache manifest version 0.0.2
 # If you change the version number in this comment,
 # the cache manifest is no longer byte-for-byte
 # identical.
@@ -8,3 +8,4 @@ CACHE MANIFEST
 test.html
 libmt63Wasm.js
 libmt63Wasm.wasm
+resampler.js

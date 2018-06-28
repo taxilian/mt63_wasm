@@ -13,6 +13,21 @@
             window.getMT63Buffer = mod.cwrap('getBuffer', 'number');
             window.encodeMT63 = mod.cwrap('encodeString', 'number', ['string', 'number', 'number']);
 
+            window.initMT63Rx = mod.cwrap('initRx', 'void', ['number', 'number', 'number', 'number']);
+            var _processMT63Rx = mod.cwrap('processAudio', 'string', ['number', 'number']);
+
+            window.processMT63Rx = function processMT63(floatArr, len) {
+                var numBytes = len * 8;
+                var ptr = mod._malloc(numBytes);
+                var heapArr = new Float64Array(mod.HEAPU8.buffer, ptr, numBytes/8);
+                heapArr.set(Float64Array.from(floatArr.slice(0, numBytes / 8)));
+
+                var outStr = _processMT63Rx(ptr, heapArr.length);
+
+                mod._free(ptr);
+                return outStr;
+            }
+
             polyfill();
 
             document.getElementById("btnSend").addEventListener('click', function(evt) {
@@ -20,6 +35,13 @@
                  evt.stopPropagation();
                  var strToPlay = document.getElementById("sendStr").value;
                  sendMessage(strToPlay);
+            }, false);
+
+            document.getElementById("btnListen").addEventListener('click', function(evt) {
+                evt.preventDefault();
+                evt.stopPropagation();
+
+                startListening();
             }, false);
         };
 
@@ -72,30 +94,41 @@
         }
 
         function startListening() {
-           // TODO(smus): Remove this ugliness.
+            // Bandwidth 2000, long interleave (1), integration period 16, squelch 8.0
+            initMT63Rx(2000, 1, 16, 5.0); 
             var isLocalhost = window.location.hostname == 'localhost' ||
                 window.location.hostname == '127.0.0.1';
             if (window.location.protocol != 'https:' && !isLocalhost) {
                 alert('HTTPS is required for microphone access, and this site has no SSL cert yet. Sorry!');
             }
-            navigator.getUserMedia({audio: true}, startStream, streamError);
+            navigator.mediaDevices.getUserMedia({audio: true}).then(startStream, streamError);
         }
 
         function startStream(stream) {
             var context = new (window.AudioContext || window.webkitAudioContext)();
 
+            let audioInput = context.createMediaStreamSource(stream);
             let scriptProc = context.createScriptProcessor(8192, 1, 1);
-            scriptProc.onAudioProcess = function(aEvt) {
-                let inpBuffer = aEvt.inputBuffer;
-                let ReSamp = new Resampler(inpBuffer.sampleRate, 8000, 1, inpBuffer);
+            scriptProc.onaudioprocess = function(aEvt) {
+                let inpBuffer = aEvt.inputBuffer.getChannelData(0);
+                let ReSamp = new Resampler(aEvt.inputBuffer.sampleRate, 8000, 1, inpBuffer);
 
                 let newLen = ReSamp.resampler(inpBuffer.length);
                 let newBuff = ReSamp.outputBuffer;
-                console.log(newBuff);
+                let res = processMT63Rx(newBuff, newLen);
+
+                if (res.length) {
+                    // console.log("Received:", res);
+                    var span = document.createElement("span");
+                    span.innerHTML = res;
+                    document.getElementById("output").appendChild(span);
+                }
+                // console.log(newBuff);
             };
 
-            stream.connect(scriptProc);
-            stream.start();
+            audioInput.connect(scriptProc);
+            // stream.start();
+            scriptProc.connect(context.destination);
         }
 
         function streamError(err) {
@@ -111,5 +144,12 @@
         <textarea type="text" rows="8" id="sendStr" style="width: 100%;"></textarea>
         <button id="btnSend">Send/Play</button>
     </form>
+
+    <button id="btnListen">Start Decoding</button>
+
+    <div id="output" style="font-family: monospace; white-space: pre;">
+        Decoded:
+<span id="outputSpan"></span>
+</div>
 </body>
 </html>
