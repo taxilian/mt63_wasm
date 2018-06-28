@@ -2,6 +2,7 @@
 #include "mt63base.h"
 #include <stdio.h>
 #include <memory>
+#include <string>
 
 using BufferType = float;
 
@@ -16,6 +17,7 @@ const auto CenterFreq = 1500;
 std::unique_ptr<BufferType> buffer(new BufferType[k_BUFFER_MAX_SIZE]);
 unsigned int bufferSize = 0;
 MT63tx Tx;
+MT63rx Rx;
 
 void resetBuffer() {
     buffer.get()[0] = 0;
@@ -74,7 +76,51 @@ void sendTone(MT63tx *Tx, int seconds, int bandwidth) {
     }
 }
 
+std::string lastString;
+
+int escape = 0;
+
+double sqlVal = 8.0;
+
 extern "C" {
+
+    void initRx(int bandwidth, int interleave, int integration, double squelch) {
+        Rx.Preset(CenterFreq, bandwidth, interleave, integration, nullptr);
+        sqlVal = squelch;
+    }
+
+    const char* processAudio(double* samples, int len) {
+        double_buff inBuff;
+        inBuff.Data = samples;
+        inBuff.Len = len;
+        inBuff.Space = len;
+
+        Rx.Process(&inBuff);
+        if (Rx.FEC_SNR() < sqlVal) {
+            return "";
+        }
+
+        lastString = std::string();
+        for (auto i = 0; i < Rx.Output.Len; ++i) {
+            auto c = Rx.Output.Data[i];
+            if ((c < 8) && escape == 0) {
+                continue;
+            }
+            if (c == 127) {
+                escape = 1;
+                continue;
+            }
+            if (escape) {
+                c += 128;
+                escape = 0;
+            }
+            lastString.push_back(c);
+        }
+        // if (!lastString.empty()) {
+        //     printf("Something decoded with SNR of %f: %s\n", Rx.FEC_SNR(), lastString.c_str());
+        // }
+        return lastString.c_str();
+    }
 
     int getSampleRate() {
         return k_SAMPLERATE;
