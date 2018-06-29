@@ -3,6 +3,7 @@
 #include <stdio.h>
 #include <memory>
 #include <string>
+#include "crc16.h"
 
 using BufferType = float;
 
@@ -77,12 +78,19 @@ void sendTone(MT63tx *Tx, int seconds, int bandwidth) {
 }
 
 std::string lastString;
+std::string lastCRCString;
 
 int escape = 0;
 
 double sqlVal = 8.0;
 
 extern "C" {
+
+    const char* crc16(const char* inStr) {
+        Ccrc16 crcObj;
+        lastCRCString = crcObj.scrc16(inStr);
+        return lastCRCString.c_str();
+    }
 
     void initRx(int bandwidth, int interleave, int integration, double squelch) {
         Rx.Preset(CenterFreq, bandwidth, interleave, integration, nullptr);

@@ -3,7 +3,9 @@
 <title>Test Page!</title>
 <meta name="viewport" content="user-scalable=no, initial-scale=1.0, minimum-scale=1.0, maximum-scale=1.0" />
     <script src="./libmt63Wasm.js"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/moment.js/2.22.2/moment.js"></script>
     <script src="resampler.js"></script>
+    <script src="amp.js"></script>
     <script type="text/javascript">
     
         window.onload = function() {
@@ -12,6 +14,7 @@
             window.getMT63SampleRate = mod.cwrap('getSampleRate', 'number');
             window.getMT63Buffer = mod.cwrap('getBuffer', 'number');
             window.encodeMT63 = mod.cwrap('encodeString', 'number', ['string', 'number', 'number']);
+            window.crc16 = mod.cwrap('crc16', 'string', ['string']);
 
             window.initMT63Rx = mod.cwrap('initRx', 'void', ['number', 'number', 'number', 'number']);
             var _processMT63Rx = mod.cwrap('processAudio', 'string', ['number', 'number']);
@@ -34,6 +37,20 @@
                  evt.preventDefault();
                  evt.stopPropagation();
                  var strToPlay = document.getElementById("sendStr").value;
+                 sendMessage(strToPlay);
+            }, false);
+            document.getElementById("btnSendAmp").addEventListener('click', function(evt) {
+                 evt.preventDefault();
+                 evt.stopPropagation();
+                 var strToPlay = document.getElementById("sendStr").value;
+                 var a = new amp("KV9G", "KD7BBC", "quickbrownfox.txt", strToPlay, 64); 
+                 strToPlay = a.getBlocks();
+                 if (strToPlay.length) {
+                    // console.log("Received:", strToPlay);
+                    var span = document.createElement("span");
+                    span.innerHTML = strToPlay;
+                    document.getElementById("output").appendChild(span);
+                }
                  sendMessage(strToPlay);
             }, false);
 
@@ -143,6 +160,7 @@
     <form>
         <textarea type="text" rows="8" id="sendStr" style="width: 100%;"></textarea>
         <button id="btnSend">Send/Play</button>
+        <button id="btnSendAmp">Send Amp/Play Amp</button>
     </form>
 
     <button id="btnListen">Start Decoding</button>
