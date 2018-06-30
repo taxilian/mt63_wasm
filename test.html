@@ -43,7 +43,7 @@
                  evt.preventDefault();
                  evt.stopPropagation();
                  var strToPlay = document.getElementById("sendStr").value;
-                 var a = new amp("KV9G", "KD7BBC", "quickbrownfox.txt", strToPlay, 64); 
+                 var a = new amp("KV9G", "KD7BBC", "quickbrownfox.txt", new Date(2017, 5, 13), strToPlay, 64); 
                  strToPlay = a.getBlocks();
                  if (strToPlay.length) {
                     // console.log("Received:", strToPlay);

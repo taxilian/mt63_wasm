@@ -10,7 +10,7 @@
 //
 // This file requires that the FL-Amp crc16 function exists on window.crc16
 
-function amp(fromCallsign, toCallSign, filename, inputBuffer, blkSize) {
+function amp(fromCallsign, toCallSign, filename, fileModifiedTime, inputBuffer, blkSize) {
     if (!window.crc16) {
         throw(new Error("crc16 does not exist on window, please provide an implementation of crc16."));
     }
@@ -20,6 +20,7 @@ function amp(fromCallsign, toCallSign, filename, inputBuffer, blkSize) {
     this.fromCallsign = fromCallsign;
     this.toCallSign = toCallSign;
     this.filename = filename;
+    this.fileModifiedTime = fileModifiedTime;
     this.blkSize = blkSize;
     /*
     //Type checking the input buffer:
@@ -72,7 +73,7 @@ amp.prototype.getBlocks = function (whichChunks) {
 // | = Field separator.
 
 amp.prototype.buildHeaderStr = function () {
-    var headerStr = this.getCurrentDate() + ":" + this.filename;
+    var headerStr = this.getFormattedDate() + ":" + this.filename;
     if(this.compression) {
         headerStr += "1";
     } else if (this.compression === false) {
@@ -86,7 +87,12 @@ amp.prototype.buildHeaderStr = function () {
     return headerStr;
 }
 
-amp.prototype.getCurrentDate = function() {
+amp.prototype.getFormattedDate = function() {
+    var _this = this;
+    if (_this.fileModifiedTime) {
+        return window.moment(_this.fileModifiedTime).format("YYYYMMDDHHmmss"); 
+    }
+    //Use current time if no file time.
     return window.moment().format("YYYYMMDDHHmmss"); 
 }
 
@@ -145,7 +151,7 @@ amp.prototype.buildHeaderBlocks = function( ) {
     //FILE BLOCK
     pBlock = String(_this.ltypes[0]);
     blockText = _this.buildHashString();
-    blockText += _this.getCurrentDate() + ":" + _this.filename;
+    blockText += _this.getFormattedDate() + ":" + _this.filename;
     pBlock += blockText.length;
     pBlock += " " + window.crc16(blockText) + ">";
     pBlock += blockText + "\n";
