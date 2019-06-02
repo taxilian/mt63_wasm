@@ -335,7 +335,7 @@ int dspPulseLimiter::Preset(int TapLen, double LimitThres)
 	return 0;
 }
 
-int dspPulseLimiter::Process(double *Inp, int InpLen, double *Out)
+int dspPulseLimiter::Process(float *Inp, int InpLen, float *Out)
 {
 	int i, o;
 	double Lim;
@@ -362,7 +362,7 @@ int dspPulseLimiter::Process(double *Inp, int InpLen, double *Out)
 	return 0;
 }
 
-int dspPulseLimiter::Process(double_buff *Input)
+int dspPulseLimiter::Process(float_buff *Input)
 {
 	int err = Output.EnsureSpace(Input->Len);
 	if (err) return -1;
@@ -744,7 +744,7 @@ int dspFirFilter::ComputeShape(
 		return 0;
 }
 
-int dspFirFilter::Process(double *Inp, int InpLen, double *Out)
+int dspFirFilter::Process(float *Inp, int InpLen, float *Out)
 {
 	int i, s, t;
 	double Sum;
@@ -776,7 +776,7 @@ int dspFirFilter::Process(double *Inp, int InpLen, double *Out)
 	return InpLen;
 }
 
-int dspFirFilter::Process(double_buff *Input)
+int dspFirFilter::Process(float_buff *Input)
 {
 	int err = Output.EnsureSpace(Input->Len);
 	if(err) return err;
@@ -849,11 +849,11 @@ int dspQuadrSplit::ComputeShape(double LowOmega,double UppOmega,
 	return 0;
 }
 
-int dspQuadrSplit::Process(double_buff *Input)
+int dspQuadrSplit::Process(float_buff *Input)
 {
 	int err, i, s, t, o, l;
-	double SumI, SumQ;
-	double *Inp;
+	float SumI, SumQ;
+	float *Inp;
 	dspCmpx *Out;
 	int InpLen;
 
@@ -958,9 +958,9 @@ int dspQuadrComb::Process(dspCmpx_buff *Input)
 {
 	int err, i, o, r, t, len;
 	dspCmpx *Inp;
-	double *Out;
+	float *Out;
 	int InpLen;
-	double I, Q;
+	float I, Q;
 	InpLen = Input->Len;
 	err = Output.EnsureSpace(InpLen*Rate);
 	if (err) return err;

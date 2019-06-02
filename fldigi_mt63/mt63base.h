@@ -250,7 +250,7 @@ public:
 					int LongInterleave = 0,
 					int Integ = 16,
 					void (*Display)(double *Spectra, int Len) = NULL);
-	int	 Process(double_buff *Input);
+	int	 Process(float_buff *Input);
 	char_buff Output;		// decoded characters
 
 	int	SYNC_LockStatus(void); // 1 => locked, 0 => not locked

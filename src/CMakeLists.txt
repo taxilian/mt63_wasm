@@ -42,7 +42,7 @@ SET( SOURCES
     ${GENERAL}
     )
 
-add_library(${LIBNAME} SHARED ${SOURCES})
+add_executable(${LIBNAME} ${SOURCES})
 message("Using ${SOURCES}")
 
 target_link_libraries(${LIBNAME} fldigi_mt63)

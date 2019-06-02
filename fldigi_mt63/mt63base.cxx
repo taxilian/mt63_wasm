@@ -941,7 +941,7 @@ Error:
 	return -1;
 }
 
-int MT63rx::Process(double_buff *Input)
+int MT63rx::Process(float_buff *Input)
 {
 	int s1,s2;
 

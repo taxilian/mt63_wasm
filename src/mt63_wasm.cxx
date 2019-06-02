@@ -97,8 +97,8 @@ extern "C" {
         sqlVal = squelch;
     }
 
-    const char* processAudio(double* samples, int len) {
-        double_buff inBuff;
+    const char* processAudio(float* samples, int len) {
+        float_buff inBuff;
         inBuff.Data = samples;
         inBuff.Len = len;
         inBuff.Space = len;

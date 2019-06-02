@@ -19,11 +19,20 @@
             window.initMT63Rx = mod.cwrap('initRx', 'void', ['number', 'number', 'number', 'number']);
             var _processMT63Rx = mod.cwrap('processAudio', 'string', ['number', 'number']);
 
-            window.processMT63Rx = function processMT63(floatArr, len) {
-                var numBytes = len * 8;
+            function sliceArray(arr, len) {
+                if (arr.subarray) {
+                    return arr.subarray(0, len);
+                } else if (arr.slice) {
+                    return arr.slice(0, len);
+                } else {
+                    throw new Error("Invalid array");
+                }
+            }
+
+            window.processMT63Rx = function processMT63(floatArr, len, sampleRate) {
+                var numBytes = len * 4;
                 var ptr = mod._malloc(numBytes);
-                var heapArr = new Float64Array(mod.HEAPU8.buffer, ptr, numBytes/8);
-                heapArr.set(Float64Array.from(floatArr.slice(0, numBytes / 8)));
+                mod.HEAPF32.set(sliceArray(floatArr, len/2), ptr/4);
 
                 var outStr = _processMT63Rx(ptr, heapArr.length);
 

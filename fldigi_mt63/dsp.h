@@ -489,9 +489,9 @@ class dspPulseLimiter
    dspPulseLimiter(); ~dspPulseLimiter();
    void Free(void);
    int Preset(int TapLen, double Limit=4.0);
-   int Process(double *Inp, int InpLen, double *Out);
-   int Process(double_buff *Input);
-   double_buff Output;
+   int Process(float *Inp, int InpLen, float *Out);
+   int Process(float_buff *Input);
+   float_buff Output;
    double dspRMS;
   private:
    int Len;
@@ -739,12 +739,12 @@ class dspFirFilter
    dspFirFilter(); ~dspFirFilter();
    void Free(void);
    int Preset(int FilterLen, double *FilterShape=(double*)NULL);
-   int Process(double *Inp, int InpLen, double *Out);
-   int Process(double_buff *Input);
+   int Process(float *Inp, int InpLen, float *Out);
+   int Process(float_buff *Input);
   //   Response(double Freq, double *Resp);
    int ComputeShape(double LowOmega, double UppOmega, double (*Window)(double));
   //   UseExternShape(double *shape);
-   double_buff Output;
+   float_buff Output;
   private:
    int Len;		// Tap/Shape length
    double *Shape;	// Response shape
@@ -768,11 +768,11 @@ class dspQuadrSplit
 //	       double *OutI, double *OutQ, int MaxOutLen, int *OutLen);
 //   int Process(double *Inp, int InpLen,
 //	       dspCmpx *Out, int MaxOutLen, int *OutLen);
-   int Process(double_buff *Input);
+   int Process(float_buff *Input);
    dspCmpx_buff Output;
   private:
    int Len;
-   double_buff Tap;
+   float_buff Tap;
    double *ShapeI, *ShapeQ; int ExternShape;
    int Rate;
 } ;
@@ -790,7 +790,7 @@ class dspQuadrComb
 	      int DecimateRate);
    int ComputeShape(double LowOmega, double UppOmega, double (*Window)(double));
    int Process(dspCmpx_buff *Input);
-   double_buff Output;
+   float_buff Output;
   private:
    int Len; double *Tap; int TapPtr;
    double *ShapeI, *ShapeQ; int ExternShape;
