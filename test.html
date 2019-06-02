@@ -2,7 +2,7 @@
 <head>
 <title>Test Page!</title>
 <meta name="viewport" content="user-scalable=no, initial-scale=1.0, minimum-scale=1.0, maximum-scale=1.0" />
-    <script src="./libmt63Wasm.js"></script>
+    <script src="./mt63Wasm.js"></script>
     <script src="https://cdnjs.cloudflare.com/ajax/libs/moment.js/2.22.2/moment.js"></script>
     <script src="resampler.js"></script>
     <script src="amp.js"></script>
@@ -15,6 +15,8 @@
             window.getMT63Buffer = mod.cwrap('getBuffer', 'number');
             window.encodeMT63 = mod.cwrap('encodeString', 'number', ['string', 'number', 'number']);
             window.crc16 = mod.cwrap('crc16', 'string', ['string']);
+            window.lzmaEncode = mod.cwrap('lzmaEncode', 'string', ['string']);
+            window.lzmaDecode = mod.cwrap('lzmaDecode', 'string', ['string']);
 
             window.initMT63Rx = mod.cwrap('initRx', 'void', ['number', 'number', 'number', 'number']);
             var _processMT63Rx = mod.cwrap('processAudio', 'string', ['number', 'number']);
