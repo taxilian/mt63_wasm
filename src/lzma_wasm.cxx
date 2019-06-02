@@ -18,7 +18,10 @@ bool StartsWith(const char *a, const char *b)
 }
 
 extern "C" {
-    const char* lzmaEncode(const char* inBuf, uint32_t origlen) {
+    const char* getLzmaOutput() {
+        return lastLzmaOutput.c_str();
+    }
+    uint32_t lzmaEncode(const char* inBuf, uint32_t origlen) {
         size_t outlen = (size_t)std::ceil(origlen * 1.1);
         if (globalBuf.size() < outlen) {
             // We use a std::vector so we can resize it if needed
@@ -40,28 +43,37 @@ extern "C" {
             bufstr.append((const char*)&outprops, sizeof(outprops));
             bufstr.append((const char*)buf, outlen);
             if (origlen < bufstr.length()) {
-                printf("%s", "Lzma could not compress data");
-                bufstr.assign(inBuf);
+                printf("%s", "Lzma could not compress data\n");
+                lastLzmaOutput.assign("Could not compress data");
+                return 0;
             }
         } else {
             printf("Lzma Compress failed: %s\n", LZMA_ERRORS[r]);
-            bufstr = std::string("Compress ERROR:") + LZMA_ERRORS[r];
+            lastLzmaOutput = std::string("Compress ERROR:") + LZMA_ERRORS[r];
+            return 0;
         }
 
         lastLzmaOutput = bufstr;
-        return lastLzmaOutput.c_str();
+        return lastLzmaOutput.size();
     }
 
-    const char* lzmaDecode(const char *inBuf, uint32_t origlen) {
+    uint32_t lzmaDecode(const char *inBuf, uint32_t origlen) {
+        for (int8_t i = 0; i < 5; ++i) {
+            if (inBuf[i] != LZMA_STR[i]) {
+                printf("Expected %c (%d) but got %c (%d) at index %d\n", LZMA_STR[i], LZMA_STR[i], inBuf[i], inBuf[i], i);
+            }
+        }
         if (origlen < 5 || !StartsWith(inBuf, LZMA_STR)) {
-            return NULL; // Not an LZMA string, don't
+            lastLzmaOutput = "Invalid input";
+            return 0; // Not an LZMA string, don't
         }
 
         const char* in = inBuf + 5; // Start after the string prefix
         size_t outlen = *reinterpret_cast<const uint32_t*>(in);
         if (outlen > 1 << 24) {
             fprintf(stderr, "Refusing to decompress data (> 16 MiB)\n");
-            return NULL;
+            lastLzmaOutput = "Output too large";
+            return 0;
         }
         in += sizeof(outlen); // Move to after the size block
 
@@ -81,10 +93,11 @@ extern "C" {
                                 inprops, LZMA_PROPS_SIZE)) != SZ_OK) {
             fprintf(stderr, "Lzma Uncompress failed: %s\n", LZMA_ERRORS[r]);
             lastLzmaOutput = std::string("ERROR:") + LZMA_ERRORS[r];
+            return 0;
         } else {
             lastLzmaOutput = std::string((const char*)buf, outlen);
         }
 
-        return lastLzmaOutput.c_str();
+        return lastLzmaOutput.size();
     }
 }

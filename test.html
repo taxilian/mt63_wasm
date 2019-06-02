@@ -15,8 +15,10 @@
             window.getMT63Buffer = mod.cwrap('getBuffer', 'number');
             window.encodeMT63 = mod.cwrap('encodeString', 'number', ['string', 'number', 'number']);
             window.crc16 = mod.cwrap('crc16', 'string', ['string']);
-            window.lzmaEncode = mod.cwrap('lzmaEncode', 'string', ['string']);
-            window.lzmaDecode = mod.cwrap('lzmaDecode', 'string', ['string']);
+            var _lzmaEncode = mod.cwrap('lzmaEncode', 'number', ['string', 'number']);
+            var _lzmaDecode = mod.cwrap('lzmaDecode', 'number', ['number', 'number']);
+            var _getLzmaOutputStr = mod.cwrap('getLzmaOutput', 'string', []);
+            var _getLzmaOutputPtr = mod.cwrap('getLzmaOutput', 'number', []);
 
             window.initMT63Rx = mod.cwrap('initRx', 'void', ['number', 'number', 'number', 'number']);
             var _processMT63Rx = mod.cwrap('processAudio', 'string', ['number', 'number']);
@@ -31,10 +33,47 @@
                 }
             }
 
+            window.lzmaEncode = function(input) {
+                let outputSize = _lzmaEncode(input, input.length);
+                if (outputSize === 0) {
+                    // Error!
+                    throw new Error(_getLzmaOutputStr());
+                }
+                let outputPtr = _getLzmaOutputPtr();
+                return mod.HEAPU8.slice(outputPtr, outputPtr + outputSize);
+            }
+
+            window.lzmaDecode = function(input) {
+                if (typeof input == "string") {
+                    // convert to array
+                    var ptr = mod._malloc(input.length);
+                    mod.HEAPU8.set(input.split('').map(c => c.charCodeAt[0]), ptr);
+                } else {
+                    var ptr = mod._malloc(input.length);
+                    mod.HEAPU8.set(input, ptr);
+                }
+                let outputSize = _lzmaDecode(ptr, input.length);
+                mod._free(ptr);
+                if (outputSize === 0) {
+                    // Error!
+                    throw new Error(_getLzmaOutputStr());
+                }
+                let outputPtr = _getLzmaOutputPtr();
+                let outputArr = mod.HEAPU8.subarray(outputPtr, outputPtr + outputSize);
+
+                var chunkSize = 5000;
+                let chunks = Math.ceil(outputArr.length / chunkSize);
+                let outStr = "";
+                for (var i = 0; i < chunks; ++i) {
+                    outStr += String.fromCharCode.apply(String, outputArr.subarray(chunkSize*i, chunkSize*(i+1)));
+                }
+                return outStr;
+            }
+
             window.processMT63Rx = function processMT63(floatArr, len, sampleRate) {
                 var numBytes = len * 4;
                 var ptr = mod._malloc(numBytes);
-                mod.HEAPF32.set(sliceArray(floatArr, len/2), ptr/4);
+                mod.HEAPF32.set(sliceArray(floatArr, len), ptr/4);
 
                 var outStr = _processMT63Rx(ptr, heapArr.length);
 
