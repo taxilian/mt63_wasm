@@ -23,6 +23,8 @@ EMSDK_ROOT="${EMSDK_CONFIG%/*}"
 NODE_PATH=$(which node)
 
 EMSCRIPTEN_CONFIG="
+import os
+
 # this helps projects using emscripten find it
 EMSCRIPTEN_ROOT = os.path.expanduser(os.getenv('EMSCRIPTEN') or '$EMSDK_ROOT') # directory
 LLVM_ROOT = os.path.expanduser(os.getenv('LLVM') or '$LLVM_ROOT') # directory
