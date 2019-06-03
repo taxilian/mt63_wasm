@@ -12,9 +12,11 @@ Currently we have it set up to build on linux or macOS.
 First you need to have cmake installed. Next, check to see what versions :
 
     cd emsdk_portable
-    ./emsdk install sdk-1.38.4-64bit
+    ./emsdk list
 
-Note that you might need to do `emsdk list` and install a different version as it won't let you install older versions by default.
+Install the correct sdk version for your platform. We're building on macOS successfully using:
+
+    ./emsdk install sdk-1.38.31-64bit
 
 # Building
 
@@ -36,7 +38,8 @@ Currently sound is being generated and can be de-encoded in FLDIGI! For mobile b
 
 # Shameless plugs
 
-This project relies heavily on the fldigi MT63 code and was put together by Richard Bateman, founder of HamStudy.org. To support our efforts, check out https://signalstuff.com/antennas (our main source of funding) and https://hamstudy.org/appstore for well engineered study apps for only $3.99.
+This project relies heavily on the fldigi MT63 code and was put together by Richard Bateman, founder of HamStudy.org. To support our efforts, check out https://signalstuff.com/antennas (our main source of funding) and https://hamstudy.org/appstore for well engineered study apps for only $3.99. HamStudy.org is sponsored by Icom, which means that in a round-about sort of way Icom also sponsors this project =] They really
+do a lot to build the ham radio community in the US so support them in whatever ways you can!
 
 # License
 

@@ -47,7 +47,7 @@
                 if (typeof input == "string") {
                     // convert to array
                     var ptr = mod._malloc(input.length);
-                    mod.HEAPU8.set(input.split('').map(c => c.charCodeAt[0]), ptr);
+                    mod.HEAPU8.set(input.split('').map(c => c.charCodeAt(0)), ptr);
                 } else {
                     var ptr = mod._malloc(input.length);
                     mod.HEAPU8.set(input, ptr);

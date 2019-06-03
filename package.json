@@ -1,0 +1,38 @@
+{
+  "name": "mt63-wasm",
+  "version": "0.9.2",
+  "description": "WebAssembly implementation of MT63 ported from fldigi",
+  "main": "dist/index.js",
+  "types": "dist/index.d.ts",
+  "directories": {
+    "test": "test"
+  },
+  "scripts": {
+    "test": "jest",
+    "build": "tsc -p . && cp -v src/*.d.ts dist/ && cp -v native_build/mt63Wasm.* dist/",
+    "build_native": "./prepemscripten.sh && cmake --build native_build/"
+  },
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/taxilian/mt63_wasm.git"
+  },
+  "author": "Richard Bateman <richard@hamstudy.org>",
+  "license": "GPL-3.0-or-later",
+  "bugs": {
+    "url": "https://github.com/taxilian/mt63_wasm/issues"
+  },
+  "homepage": "https://github.com/taxilian/mt63_wasm#readme",
+  "devDependencies": {
+    "@types/jest": "~23.3.10",
+    "@types/webpack": "^4.4.32",
+    "@types/webpack-env": "^1.13.9",
+    "jest": "^24.8.0",
+    "ts-jest": "^24.0.2",
+    "ts-node": "^8.2.0",
+    "tsc-watch": "^2.2.1",
+    "typescript": "^3.5.1"
+  },
+  "files": [
+    "dist/"
+  ]
+}
