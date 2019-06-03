@@ -1,12 +1,17 @@
+
 import { wasmModule } from "./wasmModule";
 
-const module = wasmModule.mod;
+export {
+    setFileLocation,
+    initialize,
+} from './wasmModule';
 
-export { module };
+const readyPromise = wasmModule.readyDfd;
 
-export function setFileLocation(file: string, location: string) {
-  module._setFileLocation(file, location);
-}
+export {
+    wasmModule,
+    readyPromise,
+};
 
 function subarray(arr: Float32Array | number[], len: number) {
   if ("subarray" in arr) {

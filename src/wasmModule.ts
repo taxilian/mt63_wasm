@@ -1,6 +1,7 @@
-/// <reference path="./emscripten.d.ts" />
+/// <reference path="../emscripten.d.ts" />
 
-declare const Module: (mod?: Partial<typeof EmscriptenModule>) => typeof EmscriptenModule;
+const Module: (mod?: Partial<typeof EmscriptenModule>) => typeof EmscriptenModule
+     = require('./mt63Wasm');
 
 import {polyfill} from './polyfill';
 
@@ -18,17 +19,21 @@ export namespace wasmModule {
   export let _processMT63Rx: (dataPtr: number, length: number) => string;
   export let _crc16: (str: string) => string;
   export let _lzmaEncode: (str: string, len: number) => number;
-  export let _lzmaDecode: (str: string, len: number) => number;
+  export let _lzmaDecode: (str: number, len: number) => number;
   export let _getLzmaOutputPtr: () => number;
   export let _getLzmaOutputStr: () => string;
-  export let readyDfd: Promise<void>;
+  export let readyDfd: Promise<typeof wasmModule>;
   export let mod: typeof EmscriptenModule;
 }
 // tslint:enable
 
 const fileMap: {[filename: string]: string} = {};
 
-function initMod(): Promise<any> {
+export function setFileLocation(file: string, location: string) {
+    fileMap[file] = location;
+}
+
+function initMod(): Promise<typeof wasmModule> {
   return new Promise((res, rej) => {
     wasmModule.mod = mod = Module({
       onRuntimeInitialized() {
@@ -42,10 +47,7 @@ function initMod(): Promise<any> {
         wasmModule._lzmaDecode = mod.cwrap('lzmaDecode', 'number', ['number', 'number']);
         wasmModule._getLzmaOutputStr = mod.cwrap('getLzmaOutput', 'string');
         wasmModule._getLzmaOutputPtr = mod.cwrap('getLzmaOutput', 'number');
-        res({module: mod});
-      },
-      _setFileLocation: function setPathPrefix (file: string, location: string) {
-        fileMap[file] = location;
+        res(wasmModule);
       },
       locateFile: function locateFile(fname: string) {
         if (fname in fileMap) {
@@ -58,7 +60,13 @@ function initMod(): Promise<any> {
   });
 }
 // By the time this runs we can safely start initializing things
-wasmModule.readyDfd = initMod();
+export function initialize() : Promise<typeof wasmModule> {
+    if (!wasmModule.readyDfd) {
+        wasmModule.readyDfd = initMod();
+    }
+    return wasmModule.readyDfd;
+}
+
 if (!polyfillRun) {
   polyfill();
   polyfillRun = true;

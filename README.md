@@ -34,7 +34,31 @@ Open http://localhost:8080 in your browser, open a console, and run `sendMessage
 
 # Status
 
-Currently sound is being generated and can be de-encoded in FLDIGI! For mobile browsers that cannot play at a sample rate of 8000 Hz we've played a 3 to 1 trick telling AudioContext that the buffer is at 24KHz but to play it back at 1/3 speed.
+This is being used by the Runner-tracker app. To use, do something like this:
+
+    /// <reference types="webassembly-js-api" />
+    // The above is to get types for WebAssembly -- fix this however works for you
+
+    // tslint:disable:no-var-imports
+    // tslint:disable:no-var-requires
+
+    import {
+    setFileLocation,
+    initialize,
+    MT63Client,
+    } from 'mt63-wasm';
+
+    import {
+        wasmModule,
+    } from 'mt63-wasm/dist/wasmModule';
+
+    const wasmFile = require("mt63-wasm/dist/mt63Wasm.wasm");
+
+    setFileLocation("mt63Wasm.wasm", wasmFile);
+    export const readyDfd = initialize();
+
+    export {MT63Client, wasmModule};
+
 
 # Shameless plugs
 

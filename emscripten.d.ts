@@ -33,7 +33,6 @@ declare namespace EmscriptenModule {
       imports: any, //WebAssembly.Imports,
       successCallback: (module: WebAssembly.Module) => void
   ): any;// WebAssembly.Exports;
-  function _setFileLocation(file: string, location: string) : void;
   function locateFile(url: string): string;
   function onRuntimeInitialized(): void;
   function onCustomMessage(event: MessageEvent): void;

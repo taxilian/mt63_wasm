@@ -1,3 +1,4 @@
-*.map
-*.test.js
-*.test.ts.d
+dist/*.test.js
+dist/*.test.ts.d
+dist/*.js.map
+*.js
