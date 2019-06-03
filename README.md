@@ -43,9 +43,9 @@ This is being used by the Runner-tracker app. To use, do something like this:
     // tslint:disable:no-var-requires
 
     import {
-    setFileLocation,
-    initialize,
-    MT63Client,
+        setFileLocation,
+        initialize,
+        MT63Client,
     } from 'mt63-wasm';
 
     import {
@@ -58,6 +58,22 @@ This is being used by the Runner-tracker app. To use, do something like this:
     export const readyDfd = initialize();
 
     export {MT63Client, wasmModule};
+
+You may need to update your webpack config to override the type for
+the webassembly file to "javascript/auto" and use "file-loader" to
+load it to make this work. Our vue.config.js file looks like this:
+
+    module.exports = {
+        publicPath: process.env.GITLAB_CI ? '/runner-tracker/' : '/',
+        chainWebpack: config => {
+            config.module
+                .rule('wasm')
+                .test(/\.wasm$/)
+                .type("javascript/auto")
+                .use('file-loader')
+                    .loader('file-loader');
+        }
+    };
 
 
 # Shameless plugs
