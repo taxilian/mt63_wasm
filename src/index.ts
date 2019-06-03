@@ -106,10 +106,10 @@ export class MT63Client {
     return 0;
   }
   processAudio(floatArr: Float32Array, len: number) {
-    let size = 8;
+    let size = 4;
     let numBytes = len * size;
     let ptr = wasmModule.mod._malloc(numBytes);
-    wasmModule.mod.HEAPF64.set(subarray(floatArr, len), ptr / size);
+    wasmModule.mod.HEAPF32.set(subarray(floatArr, len), ptr / size);
 
     let outStr = wasmModule._processMT63Rx(ptr, len);
 
