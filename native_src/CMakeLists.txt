@@ -36,8 +36,8 @@ file (GLOB GENERAL RELATIVE ${CMAKE_CURRENT_SOURCE_DIR}
     [^.]*.h
     )
 
-add_subdirectory(${CMAKE_CURRENT_SOURCE_DIR}/../fldigi_mt63 ${CMAKE_CURRENT_BINARY_DIR}/fldigi_mt63)
-add_subdirectory(${CMAKE_CURRENT_SOURCE_DIR}/../fldigi_lzma ${CMAKE_CURRENT_BINARY_DIR}/fldigi_lzma)
+add_subdirectory(${CMAKE_CURRENT_SOURCE_DIR}/mt63 ${CMAKE_CURRENT_BINARY_DIR}/fldigi_mt63)
+add_subdirectory(${CMAKE_CURRENT_SOURCE_DIR}/lzma ${CMAKE_CURRENT_BINARY_DIR}/fldigi_lzma)
 
 SET( SOURCES
     ${GENERAL}
@@ -53,8 +53,6 @@ set_target_properties(${LIBNAME} PROPERTIES
     LINK_FLAGS ${EMCC_FLAGS})
 
 include_directories(
-    ${CMAKE_CURRENT_SOURCE_DIR}/../fldigi_mt63
-    ${CMAKE_CURRENT_SOURCE_DIR}/../fldigi_lzma
     .
     )
 

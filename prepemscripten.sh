@@ -49,13 +49,13 @@ if [ ! -x "~/.emscripten" ]; then
 fi
 
 GEN='Unix Makefiles'
-BUILDDIR=build
+BUILDDIR=native_build
 BUILD_TYPE=Release
 TOOLCHAIN_FILE=`find $(pwd)/emsdk_portable -name 'Emscripten.cmake'`
 echo Using Toolchain: $TOOLCHAIN_FILE
 mkdir -p "$BUILDDIR"
 pushd "$BUILDDIR"
-cmake -G "$GEN" -DCMAKE_TOOLCHAIN_FILE=$TOOLCHAIN_FILE -DCMAKE_BUILD_TYPE=$BUILD_TYPE "$@" ../src
+cmake -G "$GEN" -DCMAKE_TOOLCHAIN_FILE=$TOOLCHAIN_FILE -DCMAKE_BUILD_TYPE=$BUILD_TYPE "$@" ../native_src
 if [ "$?" -ne 0 ]; then
     echo "CMake failed. Please check error messages"
     popd > /dev/null
