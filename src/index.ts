@@ -40,7 +40,18 @@ export class MT63Client {
       throw new Error(wasmModule._getLzmaOutputStr());
     }
     let outputPtr = wasmModule._getLzmaOutputPtr();
-    return wasmModule.mod.HEAPU8.slice(outputPtr, outputPtr + outputSize);
+
+    let outputArr = wasmModule.mod.HEAPU8.slice(outputPtr, outputPtr + outputSize);
+    var chunkSize = 5000;
+    let chunks = Math.ceil(outputArr.length / chunkSize);
+    let outStr = "";
+    for (var i = 0; i < chunks; ++i) {
+      outStr += String.fromCharCode.apply(
+        String,
+        outputArr.subarray(chunkSize * i, chunkSize * (i + 1)) as any
+      );
+    }
+    return outStr;
   }
   lzmaDecode(input: string | Uint8Array) {
     if (typeof input == "string") {
