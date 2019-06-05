@@ -2,6 +2,7 @@
 #include "mt63/mt63base.h"
 #include <stdio.h>
 #include <memory>
+#include <vector>
 #include <string>
 #include "crc16.h"
 
@@ -14,25 +15,24 @@ const double SIGLIMIT = 0.95;
 #define k_SAMPLERATE 8000
 #define k_BUFFERSECONDS 600
 #define k_BUFFER_MAX_SIZE k_SAMPLERATE * k_BUFFERSECONDS // 8000Hz sample rate, 600 seconds (10 minutes)
-const auto CenterFreq = 1500;
-std::unique_ptr<BufferType> buffer(new BufferType[k_BUFFER_MAX_SIZE]);
+const float CenterFreq = 1500;
+std::vector<BufferType> buffer(k_BUFFER_MAX_SIZE);
 unsigned int bufferSize = 0;
 MT63tx Tx;
 MT63rx Rx;
 
 void resetBuffer() {
-    buffer.get()[0] = 0;
+    buffer[0] = 0;
     bufferSize = 0;
 }
-void flushToBuffer(MT63tx *Tx, double mult = 1.0) {
-    auto lBuffer = buffer.get();
-    if (bufferSize + Tx->Comb.Output.Len > k_BUFFER_MAX_SIZE) {
+void flushToBuffer(MT63tx *Tx, float mult = 1.0) {
+    while (bufferSize + Tx->Comb.Output.Len > k_BUFFER_MAX_SIZE) {
         // This is not good! We will overflow the buffer.
-        // TODO: Handle this more gracefully
-        printf("Refusing to overrun the buffer!");
-        return;
+        // The only thing to do is to resize that sucker!
+        buffer.resize(buffer.size() + k_BUFFER_MAX_SIZE * 0.5);
     }
-    double maxVal = 0.0;
+    auto lBuffer = &buffer[0];
+    float maxVal = 0.0;
     for (auto i = 0; i < Tx->Comb.Output.Len; ++i) {
         auto a = fabs(Tx->Comb.Output.Data[i]);
         if (a > maxVal) { maxVal = a; }
@@ -40,7 +40,7 @@ void flushToBuffer(MT63tx *Tx, double mult = 1.0) {
     // maxVal = 1.0;
     if (mult > SIGLIMIT) { mult = SIGLIMIT; }
     for (auto i = 0; i < Tx->Comb.Output.Len; ++i) {
-        auto val = Tx->Comb.Output.Data[i] * 1.0 / maxVal * mult;
+        auto val = Tx->Comb.Output.Data[i] * 1.0f / maxVal * mult;
         if (val > SIGLIMIT) val = SIGLIMIT;
         if (val < -SIGLIMIT) val = -SIGLIMIT;
         lBuffer[bufferSize++] = static_cast<BufferType>(val);
@@ -54,13 +54,13 @@ void interleaveFlush(MT63tx *Tx) {
 }
 
 void sendTone(MT63tx *Tx, int seconds, int bandwidth) {
-    auto lBuffer = buffer.get();
+    auto lBuffer = &buffer[0];
     auto samplerate = k_SAMPLERATE;
     int numsmpls = samplerate * seconds / 512;
-    double w1 = 2.0 * M_PI * (CenterFreq - bandwidth / 2.0) / samplerate;
-    double w2 = 2.0 * M_PI * (CenterFreq + 31.0 * bandwidth / 64.0) / samplerate;
-    double phi1 = 0.0;
-    double phi2 = 0.0;
+    float w1 = 2.0f * M_PI * (CenterFreq - bandwidth / 2.0) / samplerate;
+    float w2 = 2.0f * M_PI * (CenterFreq + 31.0 * bandwidth / 64.0) / samplerate;
+    float phi1 = 0.0;
+    float phi2 = 0.0;
     for (int i = 0; i < numsmpls; i++) {
         for (int j = 0; j < 512; j++) {
             lBuffer[bufferSize++] = TONE_AMP * 0.5 * cos(phi1) +
@@ -181,7 +181,7 @@ extern "C" {
     }
 
     BufferType* getBuffer() {
-        return buffer.get();
+        return &buffer[0];
     }
 
 }

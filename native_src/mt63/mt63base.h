@@ -245,7 +245,7 @@ public:
 	MT63rx();
 	~MT63rx();
 	void	Free(void);
-	int	 Preset( double freq,
+	int	 Preset( float freq,
 					int BandWidth = 1000,
 					int LongInterleave = 0,
 					int Integ = 16,

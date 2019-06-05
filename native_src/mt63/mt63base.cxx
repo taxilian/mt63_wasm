@@ -740,16 +740,16 @@ void MT63rx::Free(void)
 }
 
 // added freq parameter to Preset
-int MT63rx::Preset(double freq, int BandWidth, int LongInterleave, int Integ,
+int MT63rx::Preset(float freq, int BandWidth, int LongInterleave, int Integ,
 		   void (*Display)(double *Spectra, int Len))
 {
 	int err,s,i,c;
 
 // W1HKJ
 // variables used for generating the anti-alias filter
-	double hbw = 1.5*BandWidth / 2;
-	double omega_low = (freq - hbw);
-	double omega_high = (freq + hbw);
+	float hbw = 1.5*BandWidth / 2;
+	float omega_low = (freq - hbw);
+	float omega_high = (freq + hbw);
 	if (omega_low < 100) omega_low = 100;
 	if (omega_high > 4000) omega_high = 4000;
 	omega_low *= (M_PI / 4000);
