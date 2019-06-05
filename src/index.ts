@@ -6,6 +6,10 @@ export {
     initialize,
 } from './wasmModule';
 
+export {
+    Resampler
+} from './resampler';
+
 const readyPromise = wasmModule.readyDfd;
 
 export {
