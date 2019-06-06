@@ -5,6 +5,10 @@ using emscripten to allow encoding MT63 messages and "sending" them from an HTML
 web application; this could be used to reliably transmit data from a smartphone app
 across Amateur Radio FM signals on VHF/UHF.
 
+# Release notes
+
+* 1.2.2 - Fixed broken wasm binary on iOS 
+
 # Preparing to build
 
 Currently we have it set up to build on linux or macOS.
@@ -16,7 +20,9 @@ First you need to have cmake installed. Next, check to see what versions :
 
 Install the correct sdk version for your platform. We're building on macOS successfully using:
 
-    ./emsdk install sdk-1.38.31-64bit
+    ./emsdk install sdk-1.38.4-64bit
+
+Note that we've had issues with iOS on later builds
 
 # Building
 
