@@ -7,6 +7,7 @@ across Amateur Radio FM signals on VHF/UHF.
 
 # Release notes
 
+* 1.3.3 - Misc updates to allow customization of the emscripten load Module
 * 1.2.2 - Fixed broken wasm binary on iOS 
 
 # Preparing to build

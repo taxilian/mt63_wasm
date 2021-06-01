@@ -1,6 +1,6 @@
 {
   "name": "@hamstudy/mt63-wasm",
-  "version": "1.3.2",
+  "version": "1.3.3",
   "private": false,
   "description": "WebAssembly implementation of MT63 ported from fldigi",
   "main": "dist/index.js",
