@@ -1,11 +1,13 @@
 
 export function polyfill() {
-  navigator.getUserMedia = (navigator.getUserMedia ||
-                (navigator as any).webkitGetUserMedia ||
-                (navigator as any).mozGetUserMedia ||
-                (navigator as any).msGetUserMedia);
+  if (typeof navigator !== 'undefined') {
+    navigator.getUserMedia = (navigator.getUserMedia ||
+        (navigator as any).webkitGetUserMedia ||
+        (navigator as any).mozGetUserMedia ||
+        (navigator as any).msGetUserMedia);
+  }
 
-  if (AudioBuffer.prototype.hasOwnProperty("copyToChannel")) {
+  if (typeof AudioBuffer === 'undefined' || AudioBuffer.prototype.hasOwnProperty("copyToChannel")) {
       return;
   }
 

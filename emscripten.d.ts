@@ -16,7 +16,7 @@ declare namespace EmscriptenModule {
   function print(str: string): void;
   function printErr(str: string): void;
   var arguments: string[];
-  var environment: EnvironmentType;
+  var ENVIRONMENT: EnvironmentType;
   var preInit: { ():  void }[];
   var preRun: { ():  void }[];
   var postRun: { ():  void }[];
