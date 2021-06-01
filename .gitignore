@@ -1,6 +1,5 @@
 .vscode
 build
-emsdk_portable
 .DS_Store
 artifacts*
 native_build
