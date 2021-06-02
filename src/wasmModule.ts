@@ -17,6 +17,7 @@ export namespace wasmModule {
   export let _getSampleRate: () => number;
   export let _initMT63Rx: (bandwidth: number, interleave: number, integration: number, squelch: number) => void;
   export let _processMT63Rx: (dataPtr: number, length: number) => string;
+  export let _processResampleMT63Rx: (dataPtr: number, sampleRate: number, length: number) => string;
   export let _crc16: (str: string) => string;
   export let _lzmaEncode: (str: string, len: number) => number;
   export let _lzmaDecode: (str: number, len: number) => number;
@@ -45,6 +46,7 @@ function initMod(customizeFn?: ModuleCustomFn): Promise<typeof wasmModule> {
           wasmModule._getSampleRate = mod.cwrap('getSampleRate', 'number');
           wasmModule._initMT63Rx = mod.cwrap('initRx', 'void', ['number', 'number', 'number', 'number']);
           wasmModule._processMT63Rx = mod.cwrap('processAudio', 'string', ['number', 'number']);
+          wasmModule._processResampleMT63Rx = mod.cwrap('processAudioResample', 'string', ['number', 'number', 'number']);
           wasmModule._crc16 = mod.cwrap("crc16", "string", ["string"]);
           wasmModule._lzmaEncode = mod.cwrap('lzmaEncode', 'number', ['string', 'number']);
           wasmModule._lzmaDecode = mod.cwrap('lzmaDecode', 'number', ['number', 'number']);
