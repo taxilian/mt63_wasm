@@ -7,6 +7,7 @@ across Amateur Radio FM signals on VHF/UHF.
 
 # Release notes
 
+* 1.5.0 - Add support for downsampling in WASM code
 * 1.4.0 - Rebuild using a newer more optimized version of emscripten
 * 1.3.3 - Misc updates to allow customization of the emscripten load Module
 * 1.2.2 - Fixed broken wasm binary on iOS 
