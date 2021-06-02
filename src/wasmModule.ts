@@ -1,6 +1,6 @@
 /// <reference path="../emscripten.d.ts" />
 
-const Module: (mod?: Partial<typeof EmscriptenModule>) => typeof EmscriptenModule
+const Module: (mod?: Partial<typeof EmscriptenModule>) => Promise<typeof EmscriptenModule>
      = require('./mt63Wasm');
 
 import {polyfill} from './polyfill';
@@ -38,7 +38,8 @@ export type ModuleCustomFn = (mod: Partial<typeof EmscriptenModule>) => Partial<
 function initMod(customizeFn?: ModuleCustomFn): Promise<typeof wasmModule> {
   return new Promise((res, rej) => {
     let moduleTpl: Partial<typeof EmscriptenModule> = {
-        onRuntimeInitialized() {
+        onRuntimeInitialized(this: typeof mod) {
+          wasmModule.mod = mod = this;
           wasmModule._encodeString = mod.cwrap('encodeString', 'number', ['string', 'number', 'number']);
           wasmModule._getBuffer = mod.cwrap('getBuffer', 'number');
           wasmModule._getSampleRate = mod.cwrap('getSampleRate', 'number');
@@ -62,7 +63,7 @@ function initMod(customizeFn?: ModuleCustomFn): Promise<typeof wasmModule> {
     if (customizeFn) {
         moduleTpl = customizeFn(moduleTpl);
     }
-    wasmModule.mod = mod = Module(moduleTpl);
+    Module(moduleTpl).catch(rej);
   });
 }
 // By the time this runs we can safely start initializing things
