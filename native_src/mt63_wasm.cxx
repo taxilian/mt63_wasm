@@ -208,7 +208,7 @@ extern "C" {
             inputBufferSize = maxOutputSize;
         }
         const auto newLen = downSample(samples, len, sampleRate, k_SAMPLERATE, &inputBuffer[0]);
-        printf("After downsample length is %lu\n", newLen);
+        // printf("After downsample length is %lu\n", newLen);
         
         return processAudio(&inputBuffer[0], newLen);
     }
