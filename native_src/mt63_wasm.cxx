@@ -29,7 +29,9 @@ void flushToBuffer(MT63tx *Tx, float mult = 1.0) {
     while (bufferSize + Tx->Comb.Output.Len > k_BUFFER_MAX_SIZE) {
         // This is not good! We will overflow the buffer.
         // The only thing to do is to resize that sucker!
-        buffer.resize(buffer.size() + k_BUFFER_MAX_SIZE * 0.5);
+        const auto newSize = buffer.size() + k_BUFFER_MAX_SIZE * 0.5;
+        buffer.resize(newSize);
+        bufferSize = newSize;
     }
     auto lBuffer = &buffer[0];
     float maxVal = 0.0;
