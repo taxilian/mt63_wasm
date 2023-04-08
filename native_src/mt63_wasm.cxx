@@ -26,12 +26,15 @@ void resetBuffer() {
     bufferSize = 0;
 }
 void flushToBuffer(MT63tx *Tx, float mult = 1.0) {
-    while (bufferSize + Tx->Comb.Output.Len > k_BUFFER_MAX_SIZE) {
+    if (bufferSize + Tx->Comb.Output.Len > buffer.size()) {
         // This is not good! We will overflow the buffer.
         // The only thing to do is to resize that sucker!
-        const auto newSize = buffer.size() + k_BUFFER_MAX_SIZE * 0.5;
-        buffer.resize(newSize);
-        bufferSize = newSize;
+        const auto sizeDiff = bufferSize + Tx->Comb.Output.Len - buffer.size();
+        
+        // We will increase the size by 125% of the difference or 50% of the max size, whichever
+        // is larger; this is so that we don't resize it too often, so the minimum size increase
+        // is 5 minutes but if there is more than 5 minutes of data we'll add more than that
+        buffer.resize(buffer.size() + std::max(sizeDiff * 1.25, k_BUFFER_MAX_SIZE * 0.5));
     }
     auto lBuffer = &buffer[0];
     float maxVal = 0.0;
