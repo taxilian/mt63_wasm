@@ -14,18 +14,7 @@ across Amateur Radio FM signals on VHF/UHF.
 
 # Preparing to build
 
-Currently we have it set up to build on linux or macOS.
-
-First you need to have cmake installed. Next, check to see what versions :
-
-    cd emsdk_portable
-    ./emsdk list
-
-Install the correct sdk version for your platform. We're building on macOS successfully using:
-
-    ./emsdk install sdk-1.38.4-64bit
-
-Note that we've had issues with iOS on later builds
+You need emscripten and cmake installed and in your path -- it will try to use `emcmake` to set up the build directory
 
 # Building
 

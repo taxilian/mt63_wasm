@@ -1,7 +1,7 @@
 
 export function polyfill() {
   if (typeof navigator !== 'undefined') {
-    navigator.getUserMedia = (navigator.getUserMedia ||
+    (navigator as any).getUserMedia = ((navigator as any).getUserMedia ||
         (navigator as any).webkitGetUserMedia ||
         (navigator as any).mozGetUserMedia ||
         (navigator as any).msGetUserMedia);
