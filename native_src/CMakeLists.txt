@@ -55,7 +55,7 @@ target_link_libraries(${LIBNAME} fldigi_mt63 fldigi_lzma)
 
 set_target_properties(${LIBNAME} PROPERTIES
     SUFFIX .js
-    LINK_FLAGS ${EMCC_FLAGS})
+    LINK_FLAGS ${LINK_FLAGS})
 
 include_directories(
     .
