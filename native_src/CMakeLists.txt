@@ -8,7 +8,7 @@ project(mt63Wasm)
 set(HAVE_STDLIB_H 1 cache)
 set(HAVE_STDDEF_H 1 cache)
 
-# set(LIB_EXPORTS "_getSampleRate,_encodeString,_getBuffer,_initRx,_processAudio,_processAudioResample,_crc16,_lzmaEncode,_lzmaDecode,_getLzmaOutput,_malloc,_free")
+set(LIB_EXPORTS "_getSampleRate,_encodeString,_getBuffer,_initRx,_processAudio,_processAudioResample,_crc16,_lzmaEncode,_lzmaDecode,_getLzmaOutput,_malloc,_free")
 # if (NOT BUILD_ASMJS)
     # set (SOURCE_MAP_PARAM "-gsource-map --source-map-base 'http://localhost:8080/'")
     set (SOURCE_MAP_PARAM "")
