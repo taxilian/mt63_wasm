@@ -96,55 +96,37 @@ float lastWeight = 0;
 size_t inputBufferSize = 10;
 std::vector<float> inputBuffer(10);
 
-size_t downSample(float* input, size_t bufferLength, float from, float to, float* output) {
-    const auto ratioWeight = from / to;
-    size_t outputOffset = 0;
-    if (bufferLength > 0) {
-        auto buffer = input;
-        auto weight = 0;
-        auto output0 = 0.0f;
-        size_t actualPosition = 0;
-        size_t amountToNext = 0;
-        bool alreadyProcessedTail = !tailExists;
-        tailExists = false;
-        const auto outputBuffer = output;
-        size_t currentPosition = 0;
-        do {
-            if (alreadyProcessedTail) {
-                weight = ratioWeight;
-                output0 = 0;
-            } else {
-                weight = lastWeight;
-                output0 = lastOutput;
-                alreadyProcessedTail = true;
-            }
-            while (weight > 0 && actualPosition < bufferLength) {
-                amountToNext = 1 + actualPosition - currentPosition;
-                if (weight >= amountToNext) {
-                    output0 += buffer[actualPosition++] * amountToNext;
-                    currentPosition = actualPosition;
-                    weight -= amountToNext;
-                } else {
-                    output0 += buffer[actualPosition] * weight;
-                    currentPosition += weight;
-                    weight = 0;
-                    break;
-                }
-            }
-            if (weight <= 0) {
-                outputBuffer[outputOffset++] = output0 / ratioWeight;
-            } else {
-                lastWeight = weight;
-                lastOutput = output0;
-                tailExists = true;
-                break;
-            }
-        } while (actualPosition < bufferLength);
+size_t downSample(float* input, size_t length, float sourceSampleRate, float targetSampleRate, std::vector<float>& outputBuffer) {
+    // if the source and target sample rates are the same, just copy the input to the output
+    if (sourceSampleRate == targetSampleRate) {
+        if (length > outputBuffer.size()) {
+            printf("Resizing output buffer to %lu\n", length);
+            outputBuffer.resize(length);
+        }
+        // Copy with std::copy
+        std::copy(input, input + length, outputBuffer.begin());
+        return length;
     }
-    return outputOffset;
+    // Otherwise we need to downsample
+    const float ratio = sourceSampleRate / targetSampleRate;
+    const size_t newLength = static_cast<size_t>(std::ceil(length / ratio));
+    if (newLength > outputBuffer.size()) {
+        printf("Resizing output buffer to %lu\n", newLength);
+        outputBuffer.resize(newLength);
+    }
+    for (size_t i = 0; i < newLength; ++i) {
+        // printf("i = %lu\n", i);
+        const float index = i * ratio;
+        const size_t indexFloor = static_cast<size_t>(std::floor(index));
+        const float indexRemainder = index - indexFloor;
+        if (indexFloor + 1 < length) {
+            outputBuffer[i] = (1 - indexRemainder) * input[indexFloor] + indexRemainder * input[indexFloor + 1];
+        } else {
+            outputBuffer[i] = input[indexFloor];
+        }
+    }
+    return newLength;
 }
-
-
 
 
 extern "C" {
@@ -212,9 +194,11 @@ extern "C" {
             inputBuffer.resize(maxOutputSize);
             inputBufferSize = maxOutputSize;
         }
-        const auto newLen = downSample(samples, len, sampleRate, k_SAMPLERATE, &inputBuffer[0]);
+        // printf("Downsampling from %lu to %d, %lu samples\n", sampleRate, k_SAMPLERATE, len);
+        const auto newLen = downSample(samples, len, sampleRate, k_SAMPLERATE, inputBuffer);
         // printf("After downsample length is %lu\n", newLen);
         
+        // printf("Calling processAudio with %lu samples\n", newLen);
         return processAudio(&inputBuffer[0], newLen);
     }
 
@@ -236,16 +220,9 @@ extern "C" {
 
         Tx.Preset(1500, bandwidth, interleave);
         sendTone(&Tx, 2, bandwidth);
-        // Tx.SendTune(true);
-        // flushToBuffer(&Tx);
-        // Tx.SendTune(true);
-        // flushToBuffer(&Tx);
-        // Tx.SendTune(true);
-        // flushToBuffer(&Tx);
 
-        // interleaveFlush(&Tx);
 
-        printf("Sending string: %s\n", inStr);
+        // printf("Sending string: %s\n", inStr);
         for (auto cur = inStr; *cur != NULL; ++cur) {
             unsigned char c = *cur;
             if (c > 127) {

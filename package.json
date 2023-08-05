@@ -1,6 +1,6 @@
 {
   "name": "@hamstudy/mt63-wasm",
-  "version": "1.5.0",
+  "version": "1.5.2",
   "private": false,
   "description": "WebAssembly implementation of MT63 ported from fldigi",
   "main": "dist/index.js",
@@ -12,6 +12,7 @@
     "test": "jest",
     "build": "tsc -p . && cp -v native_build/mt63Wasm.* dist/",
     "build_native": "./prepemscripten.sh && cmake --build native_build/",
+    "build_all": "npm run build_native && npm run build",
     "prepublish": "tsc -p . && cp -v native_build/mt63Wasm.* dist/"
   },
   "repository": {
