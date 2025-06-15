@@ -5,8 +5,9 @@ export class DspDelayLine<T> {
   public dspDelay: number; // how many (at least) backward samples are stored
   public lineSize: number; // allocated size
   public dataLen: number; // length of the valid data
-  public inpPtr: T[]; // first sample for the most recent processed batch
+  public inpPtr: T[]; // The line array (in C++ this is a pointer into line)
   public inpData: T[]; // alias for inpPtr for compatibility
+  public inpOffset: number = 0; // offset into line for the most recent input
   public inpLen: number; // number of samples for the most recent input
 
   constructor(
@@ -21,7 +22,8 @@ export class DspDelayLine<T> {
     this.dspDelay = maxDspDelay;
     this.line = new Array<T>(this.lineSize);
     this.clearArray(this.line, this.lineSize);
-    this.inpPtr = this.line.slice(this.dataLen);
+    this.inpOffset = this.dataLen;
+    this.inpPtr = this.line; // In TypeScript, we'll use the whole array with offset
     this.inpData = this.inpPtr; // alias
     this.inpLen = 0;
   }
@@ -34,8 +36,13 @@ export class DspDelayLine<T> {
     if (this.dataLen + len > this.lineSize) {
       return -1;
     }
-    this.copyArray(this.line.slice(this.dataLen), inp, len);
-    this.inpPtr = this.line.slice(this.dataLen);
+    // Copy new data to the line
+    for (let i = 0; i < len; i++) {
+      this.line[this.dataLen + i] = inp[i];
+    }
+    // Update offset to point to the start of newly added data
+    this.inpOffset = this.dataLen;
+    this.inpPtr = this.line; // Still the same array
     this.inpData = this.inpPtr; // keep alias in sync
     this.inpLen = len;
     this.dataLen += len;
@@ -48,7 +55,9 @@ export class DspDelayLine<T> {
 
   private clearArray(arr: T[], size: number): void {
     for (let i = 0; i < size; i++) {
-      arr[i] = null as any; // Replace with the appropriate 'zero' value for the generic type T
+      // Initialize with {re: 0, im: 0} for complex numbers
+      // This assumes T is dspCmpx when used with MT63rx
+      arr[i] = { re: 0, im: 0 } as any;
     }
   }
 

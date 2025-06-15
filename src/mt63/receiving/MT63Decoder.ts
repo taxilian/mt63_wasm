@@ -1,7 +1,7 @@
 import { dspFindMax, dspFindMin, dspLowPass2, dspLowPass2Coeff, dspPowerOf2, dspRMS, dspWalshTrans } from '../dsp';
 
 export class MT63decoder {
-  public Output: string = '';
+  public Output: number = 0;  // Should be numeric code, not string
   public SignalToNoise = 0;
   public CarrOfs = 0;
 
@@ -16,7 +16,7 @@ export class MT63decoder {
   private W5: number;
   private DecodeLen: number; // = this.Integ / 2;
   private DecodeSize: number; // = this.DecodeLen * this.ScanLen;
-  private DecodePipe: string[]; // = new Array(this.DecodeSize);
+  private DecodePipe: number[]; // = new Array(this.DecodeSize);  // Should store numeric codes
   private DecodePtr: number; // = 0;
 
   private IntlvSize: number; // = (this.IntlvLen + 1) * this.ScanSize;
@@ -42,11 +42,11 @@ export class MT63decoder {
 
     this.ScanLen = 2 * this.Margin + 1;
     this.ScanSize = this.DataCarriers + 2 * this.Margin;
-    this.DecodeSnrMid = new Array(this.ScanLen);
-    this.DecodeSnrOut = new Array(this.ScanLen);
+    this.DecodeSnrMid = new Array(this.ScanLen).fill(0);
+    this.DecodeSnrOut = new Array(this.ScanLen).fill(0);
     this.DecodeLen = this.Integ / 2;
     this.DecodeSize = this.DecodeLen * this.ScanLen;
-    this.DecodePipe = new Array(this.DecodeSize);
+    this.DecodePipe = new Array(this.DecodeSize).fill(0);
     this.DecodePtr = 0;
 
     this.IntlvSize = (this.IntlvLen + 1) * this.ScanSize;
@@ -68,8 +68,15 @@ export class MT63decoder {
   public Process(data: Float64Array): number {
     let Min: number, Max: number, Sig: number, Noise: number, SNR: number;
     let MinPos: number, MaxPos: number, code: number;
+    
+    console.log(`MT63Decoder.Process called with ${data.length} samples, ScanSize=${this.ScanSize}`);
+    
+    if (data.length !== this.ScanSize) {
+      console.log(`ERROR: Data length ${data.length} doesn't match ScanSize ${this.ScanSize}`);
+      return -1;
+    }
 
-    this.IntlvPipe.set(data.subarray(0, this.ScanSize), this.IntlvPtr);
+    this.IntlvPipe.set(data, this.IntlvPtr);
 
     for (let s = 0; s < this.ScanLen; s++) {
       for (let i = 0; i < this.DataCarriers; i++) {
@@ -83,7 +90,13 @@ export class MT63decoder {
             k -= this.IntlvSize;
           }
         }
-        this.WalshBuff[i] = this.IntlvPipe[k + s + i];
+        const index = k + s + i;
+        if (index >= this.IntlvSize) {
+          console.log(`ERROR: Array bounds exceeded! index=${index}, IntlvSize=${this.IntlvSize}, k=${k}, s=${s}, i=${i}`);
+          this.WalshBuff[i] = 0.0;
+        } else {
+          this.WalshBuff[i] = this.IntlvPipe[index];
+        }
       }
       dspWalshTrans(this.WalshBuff, this.DataCarriers);
       ({ min: Min, index: MinPos } = dspFindMin(this.WalshBuff, this.DataCarriers));
@@ -106,7 +119,7 @@ export class MT63decoder {
       let { mid, out } = dspLowPass2(SNR, this.DecodeSnrMid[s], this.DecodeSnrOut[s], this.W1, this.W2, this.W5);
       this.DecodeSnrMid[s] = mid;
       this.DecodeSnrOut[s] = out;
-      this.DecodePipe[this.DecodePtr + s] = String.fromCharCode(code);
+      this.DecodePipe[this.DecodePtr + s] = code;  // Store numeric code, not character
     }
     this.IntlvPtr += this.ScanSize;
     if (this.IntlvPtr >= this.IntlvSize) {
@@ -117,12 +130,17 @@ export class MT63decoder {
       this.DecodePtr = 0;
     }
     ({ max: Max, index: MaxPos } = dspFindMax(this.DecodeSnrOut, this.ScanLen));
-    // Get the decoded character from the pipe at the best carrier offset
-    const pipeIndex = this.DecodePtr - this.DecodeLen + MaxPos;
-    if (pipeIndex >= 0 && pipeIndex < this.DecodeSize) {
-      this.Output = this.DecodePipe[pipeIndex];
+    // Match C++ exactly: Output = DecodePipe[DecodePtr + MaxPos]
+    const outputIndex = this.DecodePtr + MaxPos;
+    if (outputIndex >= this.DecodeSize) {
+      console.log(`ERROR: Output index bounds exceeded! outputIndex=${outputIndex}, DecodeSize=${this.DecodeSize}`);
+      this.Output = 0;
     } else {
-      this.Output = '';
+      this.Output = this.DecodePipe[outputIndex];
+      if (this.Output === undefined) {
+        console.log(`ERROR: DecodePipe[${outputIndex}] is undefined! DecodePtr=${this.DecodePtr}, MaxPos=${MaxPos}`);
+        this.Output = 0;
+      }
     }
     this.SignalToNoise = Max;
     this.CarrOfs = MaxPos - (this.ScanLen - 1) / 2;

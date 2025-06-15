@@ -182,7 +182,11 @@ export class MT63rx {
         this.testOffset.preset(-0.25 * (2.0 * Math.PI / this.windowLen)); // for decoder tests only
 
         this.procdspDelay = integLength * SymbolSepar;
-        this.procLine = new DspDelayLine<dspCmpx>(this.procdspDelay + this.windowLen + SymbolSepar);
+        // Ensure we have enough buffer space for processing
+        // The C++ code seems to handle this differently, so we need a larger buffer
+        const minBufferSize = this.windowLen * 8; // Ensure space for multiple windows
+        const requestedSize = this.procdspDelay + this.windowLen + SymbolSepar;
+        this.procLine = new DspDelayLine<dspCmpx>(requestedSize, Math.max(minBufferSize, requestedSize * 4));
         this.syncProcPtr = 0;
 
         this.scanFirst = this.firstDataCarr - scanMargin * DataCarrSepar; // first FFT bin to scan
@@ -212,9 +216,14 @@ export class MT63rx {
         }
 
         for (let c = (this.scanFirst * SymbolSepar) & this.windowLenMask, i = 0; i < this.scanLen; i++) {
-            this.syncPhCorr[i].re = this.FFT.Twiddle[c].re * this.FFT.Twiddle[c].re -
-                               this.FFT.Twiddle[c].im * this.FFT.Twiddle[c].im;
-            this.syncPhCorr[i].im = 2 * this.FFT.Twiddle[c].re * this.FFT.Twiddle[c].im;
+            if (!this.FFT.Twiddle[c]) {
+                console.error(`FFT.Twiddle[${c}] is null/undefined. FFT.Size=${this.FFT.Size}, scanFirst=${this.scanFirst}, SymbolSepar=${SymbolSepar}`);
+                this.syncPhCorr[i] = { re: 0, im: 0 };
+            } else {
+                this.syncPhCorr[i].re = this.FFT.Twiddle[c].re * this.FFT.Twiddle[c].re -
+                                   this.FFT.Twiddle[c].im * this.FFT.Twiddle[c].im;
+                this.syncPhCorr[i].im = 2 * this.FFT.Twiddle[c].re * this.FFT.Twiddle[c].im;
+            }
             c = (c + SymbolSepar) & this.windowLenMask;
         }
 
@@ -276,7 +285,8 @@ export class MT63rx {
         }
 
         // Initialize data pipe
-        this.dataPipeLen = integLength / 2;
+        this.dataPipeLen = Math.max(1, integLength / 2); // Ensure at least 1
+        this.dataPipe = new Array(this.dataPipeLen);
         for (let i = 0; i < this.dataPipeLen; i++) {
             this.dataPipe[i] = new Array(this.dataScanLen);
             for (let j = 0; j < this.dataScanLen; j++) {
@@ -371,18 +381,33 @@ export class MT63rx {
         // of the resultant FFT of the anti-aliased input signal. Actual decoding
         // is at baseband.
 
-        const inputSplitResp = this.inputSplit.process([...input]);
+        // In C++, this takes a float_buff which has Data, Len, Space
+        // Our QuadrSplit expects a number array
+        const inputArray = Array.from(input);
+        
+        const inputSplitResp = this.inputSplit.process(inputArray);
 
         this.procLine.process(inputSplitResp, inputSplitResp.length);
         //  TestOfs.Process(this.InpSplit.Output);
         //  ProcLine.Process(this.TestOfs.Output);
 
         // printf("New input, Len=%d/%d\n", Input.Len, ProcLine.InpLen);
+        console.log(`ProcessAudio: inputSplitResp.length=${inputSplitResp.length}, procLine.inpLen=${this.procLine.inpLen}, syncProcPtr=${this.syncProcPtr}, windowLen=${this.windowLen}`);
+        console.log(`Loop condition: ${this.syncProcPtr + this.windowLen} < ${this.procLine.inpLen} = ${this.syncProcPtr + this.windowLen < this.procLine.inpLen}`);
 
+        let syncCount = 0;
+        let dataCount = 0;
         while (this.syncProcPtr + this.windowLen < this.procLine.inpLen) {
-            this.syncProcess(this.procLine.inpData.slice(this.syncProcPtr));
+            syncCount++;
+            // In C++, ProcLine.InpPtr + SyncProcPtr points to the data
+            // In our case, we use line with offset
+            const syncOffset = this.procLine.inpOffset + this.syncProcPtr;
+            this.syncProcess(this.procLine.line.slice(syncOffset));
+            
+            console.log(`Sync check: syncPtr=${this.syncPtr}, symbPtr=${this.symbPtr}, equal=${this.syncPtr === this.symbPtr}`);
             
             if (this.syncPtr === this.symbPtr) {
+                dataCount++;
                 s1 = Math.floor(
                     this.syncProcPtr -
                     this.procdspDelay +
@@ -390,9 +415,15 @@ export class MT63rx {
                 );
                 s2 = s1 + SymbolSepar / 2;
                 
+                // Calculate actual offsets into the line
+                const dataOffset1 = this.procLine.inpOffset + s1;
+                const dataOffset2 = this.procLine.inpOffset + s2;
+                
+                console.log(`Calling dataProcess: syncPtr=${this.syncPtr}, symbPtr=${this.symbPtr}, syncLocked=${this.syncLocked}`);
+                
                 this.dataProcess(
-                    this.procLine.inpData.slice(s1),
-                    this.procLine.inpData.slice(s2),
+                    this.procLine.line.slice(dataOffset1),
+                    this.procLine.line.slice(dataOffset2),
                     this.syncFreqOfs,
                     s1 - this.dataProcPtr
                 );
@@ -459,8 +490,13 @@ export class MT63rx {
         // Perform FFT on windowed input
         for (i = 0; i < this.windowLen; i++) {
             r = this.FFT.BitRevIdx[i];
-            this.FFTbuff[r].re = Slice[i].re * this.rxWindow[i];
-            this.FFTbuff[r].im = Slice[i].im * this.rxWindow[i];
+            if (i < Slice.length && Slice[i]) {
+                this.FFTbuff[r].re = Slice[i].re * this.rxWindow[i];
+                this.FFTbuff[r].im = Slice[i].im * this.rxWindow[i];
+            } else {
+                this.FFTbuff[r].re = 0;
+                this.FFTbuff[r].im = 0;
+            }
         }
         this.FFT.coreProc(this.FFTbuff);
 
@@ -618,7 +654,8 @@ export class MT63rx {
             // Adjust based on sync lock status
             if (this.syncLocked) {
                 // Flip SymbTime if it doesn't agree with average
-                if (dspScalProd(SymbTime, this.averSymb) < 0.0) {
+                if (SymbTime && this.averSymb && 
+                    dspScalProd(SymbTime, this.averSymb) < 0.0) {
                     SymbTime.re = -SymbTime.re;
                     SymbTime.im = -SymbTime.im;
                     FreqOfs -= DataCarrSepar;
@@ -639,7 +676,8 @@ export class MT63rx {
                     FreqOfs += (Math.abs(Fu) < Math.abs(F0)) ? A : 0.0;
             } else {
                 // Flip SymbTime if it doesn't agree with previous
-                if (dspScalProd(SymbTime, this.symbPipe[this.trackPipePtr]) < 0.0) {
+                if (SymbTime && this.symbPipe[this.trackPipePtr] && 
+                    dspScalProd(SymbTime, this.symbPipe[this.trackPipePtr]) < 0.0) {
                     SymbTime.re = -SymbTime.re;
                     SymbTime.im = -SymbTime.im;
                     FreqOfs -= DataCarrSepar;
@@ -716,14 +754,24 @@ export class MT63rx {
             r = this.FFT.BitRevIdx[i];
             
             // Process even slice
-            Dtmp = dspCmpxMult(EvenSlice[i], Phas);
-            this.FFTbuff[r].re = Dtmp.re * this.rxWindow[i];
-            this.FFTbuff[r].im = Dtmp.im * this.rxWindow[i];
+            if (i < EvenSlice.length && EvenSlice[i]) {
+                Dtmp = dspCmpxMult(EvenSlice[i], Phas);
+                this.FFTbuff[r].re = Dtmp.re * this.rxWindow[i];
+                this.FFTbuff[r].im = Dtmp.im * this.rxWindow[i];
+            } else {
+                this.FFTbuff[r].re = 0;
+                this.FFTbuff[r].im = 0;
+            }
             
             // Process odd slice
-            Dtmp = dspCmpxMult(OddSlice[i], Phas);
-            this.FFTbuff2[r].re = Dtmp.re * this.rxWindow[i];
-            this.FFTbuff2[r].im = Dtmp.im * this.rxWindow[i];
+            if (i < OddSlice.length && OddSlice[i]) {
+                Dtmp = dspCmpxMult(OddSlice[i], Phas);
+                this.FFTbuff2[r].re = Dtmp.re * this.rxWindow[i];
+                this.FFTbuff2[r].im = Dtmp.im * this.rxWindow[i];
+            } else {
+                this.FFTbuff2[r].re = 0;
+                this.FFTbuff2[r].im = 0;
+            }
             
             // Update phase rotation
             Phas = dspCmpxMult(Phas, Freq);
@@ -802,8 +850,22 @@ export class MT63rx {
 
         // Step 6: Pass to decoder
         const decoderResult = this.Decoder.Process(new Float64Array(this.dataPhase));
-        if (this.Decoder.Output && this.Decoder.Output.length > 0) {
-            this.Output.Data.push(this.Decoder.Output);
+        if (this.Decoder.Output !== 0) {  // Now Output is numeric
+            const code = this.Decoder.Output;
+            // Log sync status for debugging
+            console.log(`Sync status: locked=${this.syncLocked}, conf=${this.syncSymbConf.toFixed(3)}, FreqOfs=${this.syncFreqOfs.toFixed(1)}`);
+            
+            // Convert numeric code to character - simplified version for debugging
+            let char = '';
+            if (code >= 32 && code <= 126) {
+                char = String.fromCharCode(code);
+            } else if (code === 10 || code === 13) {
+                char = String.fromCharCode(code); // newline/carriage return
+            } else {
+                char = `<${code}>`;  // Show control characters as <code>
+            }
+            console.log(`Decoder produced character: "${char}" (code ${code})`);
+            this.Output.Data.push(char);
             this.Output.Len++;
         }
     }
