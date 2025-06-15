@@ -8,6 +8,7 @@ showExec(){
 
 BUILDDIR=native_build
 BUILD_TYPE=Release
+# BUILD_TYPE=Debug
 
 mkdir -p "$BUILDDIR"
 pushd "$BUILDDIR" || exit 1

@@ -42,8 +42,8 @@
 
 #include "mt63base.h"
 
-#include "symbol.dat"	  // symbol shape
-#include "mt63intl.dat" // interleave patterns
+#include "symbol.hxx"	  // symbol shape
+#include "mt63intl.hxx" // interleave patterns
 
 // W1HKJ
 // fixed filter shapes replaced by maximally flat blackman3 filters

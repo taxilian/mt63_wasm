@@ -98,7 +98,7 @@ export function winFirQ(
 }
 
 
-export function dspWalshTrans(Data: Float32Array, Len: number): void {  // Len must be 2^N
+export function dspWalshTrans(Data: Float32Array | Float64Array, Len: number): void {  // Len must be 2^N
   for (let step = 1; step < Len; step *= 2) {
       for (let ptr = 0; ptr < Len; ptr += 2 * step) {
           for (let ptr2 = ptr; (ptr2 - ptr) < step; ptr2 += 1) {
@@ -162,7 +162,7 @@ export function dspLowPass2(input: number | dspCmpx, mid: number | dspCmpx, out:
     }
 }
 
-export function dspFindMax(Data: number[] | Float32Array, Len: number): { max: number, index: number } {
+export function dspFindMax(Data: number[] | Float32Array | Float64Array, Len: number): { max: number, index: number } {
     let max = Data[0];
     let index = 0;
     for (let i = 1; i < Len; i++) {
@@ -174,7 +174,7 @@ export function dspFindMax(Data: number[] | Float32Array, Len: number): { max: n
     return { max, index };
 }
 
-export function dspFindMin(Data: number[] | Float32Array, Len: number): { min: number, index: number } {
+export function dspFindMin(Data: number[] | Float32Array | Float64Array, Len: number): { min: number, index: number } {
     let min = Data[0];
     let index = 0;
     for (let i = 1; i < Len; i++) {
@@ -186,7 +186,7 @@ export function dspFindMin(Data: number[] | Float32Array, Len: number): { min: n
     return { min, index };
 }
 
-export function dspRMS(input: Float32Array | number[] | dspCmpx[] | DspSeq<number> | DspCmpxBuff, len: number): number {
+export function dspRMS(input: Float32Array | Float64Array | number[] | dspCmpx[] | DspSeq<number> | DspCmpxBuff, len: number): number {
     if ('data' in input) {
         return dspRMS(input.data, input.len);
     }
