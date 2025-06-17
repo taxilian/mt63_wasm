@@ -1,38 +1,41 @@
 import { dspFindMax, dspFindMin, dspLowPass2, dspLowPass2Coeff, dspPowerOf2, dspRMS, dspWalshTrans } from '../dsp';
 
 export class MT63decoder {
-  public Output: number = 0;  // Should be numeric code, not string
+  public Output: number = 0;  // C++ uses char but we use number
   public SignalToNoise = 0;
   public CarrOfs = 0;
 
-  private WalshBuff: Float32Array; // = new Float32Array(this.DataCarriers);
+  private DataCarriers: number;
+  private IntlvPipe: Float64Array;  // C++ uses double*
+  private IntlvLen: number;
+  private IntlvSize: number;
+  private IntlvPtr: number = 0;
+  private IntlvPatt: Int32Array;  // C++ uses int*
 
-  private ScanLen: number; // = 2 * this.Margin + 1;
-  private ScanSize: number; // = this.DataCarriers + 2 * this.Margin;
-  private DecodeSnrMid: number[]; // = new Array(this.ScanLen);
-  private DecodeSnrOut: number[]; // = new Array(this.ScanLen);
+  private WalshBuff: Float64Array;  // C++ uses double*
+
+  private ScanLen: number;
+  private ScanSize: number;
+  private DecodeSnrMid: Float64Array;  // C++ uses double*
+  private DecodeSnrOut: Float64Array;  // C++ uses double*
   private W1: number;
   private W2: number;
   private W5: number;
-  private DecodeLen: number; // = this.Integ / 2;
-  private DecodeSize: number; // = this.DecodeLen * this.ScanLen;
-  private DecodePipe: number[]; // = new Array(this.DecodeSize);  // Should store numeric codes
-  private DecodePtr: number; // = 0;
-
-  private IntlvSize: number; // = (this.IntlvLen + 1) * this.ScanSize;
-  private IntlvPipe: Float32Array; // = new Array(this.IntlvSize);
-  private IntlvPtr: number; // = 0;
-  private IntlvPatt: number[]; // = new Array(this.DataCarriers);
-
+  private DecodePipe: Uint8Array;  // C++ uses char*
+  private DecodeLen: number;
+  private DecodeSize: number;
+  private DecodePtr: number = 0;
 
   constructor(
-    private DataCarriers: number,
-    private IntlvLen: number,
-    Pattern: number[],
-    private Margin: number,
-    private Integ: number,
+    Carriers: number,
+    Intlv: number,
+    Pattern: number[] | Int32Array,
+    Margin: number,
+    Integ: number,
   ) {
-    if (!dspPowerOf2(this.DataCarriers)) {
+    this.DataCarriers = Carriers;
+    this.IntlvLen = Intlv;
+    if (!dspPowerOf2(Carriers)) {
       throw new Error('dspPowerOf2(Carriers) failed');
     }
     const { w1, w2, w5 } = dspLowPass2Coeff(Integ);
@@ -40,69 +43,99 @@ export class MT63decoder {
     this.W2 = w2;
     this.W5 = w5;
 
-    this.ScanLen = 2 * this.Margin + 1;
-    this.ScanSize = this.DataCarriers + 2 * this.Margin;
-    this.DecodeSnrMid = new Array(this.ScanLen).fill(0);
-    this.DecodeSnrOut = new Array(this.ScanLen).fill(0);
-    this.DecodeLen = this.Integ / 2;
+    this.ScanLen = 2 * Margin + 1;
+    this.ScanSize = this.DataCarriers + 2 * Margin;
+    this.DecodeSnrMid = new Float64Array(this.ScanLen);
+    this.DecodeSnrOut = new Float64Array(this.ScanLen);
+    this.DecodeLen = Integ / 2;
     this.DecodeSize = this.DecodeLen * this.ScanLen;
-    this.DecodePipe = new Array(this.DecodeSize).fill(0);
+    this.DecodePipe = new Uint8Array(this.DecodeSize);
     this.DecodePtr = 0;
 
     this.IntlvSize = (this.IntlvLen + 1) * this.ScanSize;
-    this.IntlvPipe = new Float32Array(this.IntlvSize);
+    this.IntlvPipe = new Float64Array(this.IntlvSize);
     this.IntlvPtr = 0;
-    this.IntlvPatt = new Array(this.DataCarriers);
+    this.IntlvPatt = new Int32Array(this.DataCarriers);
 
-    this.WalshBuff = new Float32Array(this.DataCarriers);
+    this.WalshBuff = new Float64Array(this.DataCarriers);
 
-    for (let p = 0, i = 0; i < this.DataCarriers; i++) {
+    let p = 0;
+    for (let i = 0; i < this.DataCarriers; i++) {
       this.IntlvPatt[i] = p * this.ScanSize;
       p += Pattern[i];
-      if (p >= this.IntlvLen) {
-        p -= this.IntlvLen;
-      }
+      if (p >= this.IntlvLen) p -= this.IntlvLen;
     }
   }
 
   public Process(data: Float64Array): number {
+    let s: number, i: number, k: number;
     let Min: number, Max: number, Sig: number, Noise: number, SNR: number;
     let MinPos: number, MaxPos: number, code: number;
     
-    console.log(`MT63Decoder.Process called with ${data.length} samples, ScanSize=${this.ScanSize}`);
-    
     if (data.length !== this.ScanSize) {
-      console.log(`ERROR: Data length ${data.length} doesn't match ScanSize ${this.ScanSize}`);
       return -1;
     }
 
     this.IntlvPipe.set(data, this.IntlvPtr);
+    
+    // Debug IntlvPipe data
+    if (this.Output < 3) {
+      const nonZeroIntlv = Array.from(this.IntlvPipe).filter(x => Math.abs(x) > 0.001).length;
+      const dataRange = `min=${Math.min(...data).toFixed(3)}, max=${Math.max(...data).toFixed(3)}`;
+      console.log(`IntlvPipe: ${nonZeroIntlv}/${this.IntlvPipe.length} non-zero, input data range: ${dataRange}`);
+    }
 
-    for (let s = 0; s < this.ScanLen; s++) {
-      for (let i = 0; i < this.DataCarriers; i++) {
-        let k = this.IntlvPtr - this.ScanSize - this.IntlvPatt[i];
-        if (k < 0) {
-          k += this.IntlvSize;
-        }
+    for (s = 0; s < this.ScanLen; s++) {
+      for (i = 0; i < this.DataCarriers; i++) {
+        k = this.IntlvPtr - this.ScanSize - this.IntlvPatt[i];
+        if (k < 0) k += this.IntlvSize;
         if ((s & 1) && (i & 1)) {
           k += this.ScanSize;
-          if (k >= this.IntlvSize) {
-            k -= this.IntlvSize;
-          }
+          if (k >= this.IntlvSize) k -= this.IntlvSize;
         }
         const index = k + s + i;
-        if (index >= this.IntlvSize) {
-          console.log(`ERROR: Array bounds exceeded! index=${index}, IntlvSize=${this.IntlvSize}, k=${k}, s=${s}, i=${i}`);
-          this.WalshBuff[i] = 0.0;
-        } else {
+        
+        // Access array directly like C++ but with safer bounds handling
+        if (index >= 0 && index < this.IntlvSize) {
           this.WalshBuff[i] = this.IntlvPipe[index];
+        } else {
+          // Handle out of bounds access - this shouldn't happen in correct implementation
+          console.log(`INDEX OUT OF BOUNDS: ${index} >= ${this.IntlvSize}, using 0`);
+          this.WalshBuff[i] = 0.0;
+        }
+        
+        // Debug indexing for first few cases
+        if (this.Output < 1 && s === 0 && i < 3) {
+          const value = (index >= 0 && index < this.IntlvSize) ? this.IntlvPipe[index] : 0;
+          console.log(`Walsh[${i}] = IntlvPipe[${index}] = ${value.toFixed(3)} (k=${k}, s=${s}, i=${i}, IntlvPtr=${this.IntlvPtr})`);
         }
       }
+      
+      // Debug Walsh coefficients before transform (first few times)
+      if (this.Output < 3 && s === 0) {
+        const nonZeroWalsh = this.WalshBuff.filter(x => Math.abs(x) > 0.001).length;
+        const maxWalsh = Math.max(...this.WalshBuff.map(x => Math.abs(x)));
+        console.log(`Pre-Walsh: ${nonZeroWalsh}/${this.DataCarriers} non-zero, max=${maxWalsh.toFixed(3)}`);
+      }
+      
       dspWalshTrans(this.WalshBuff, this.DataCarriers);
-      ({ min: Min, index: MinPos } = dspFindMin(this.WalshBuff, this.DataCarriers));
-      ({ max: Max, index: MaxPos } = dspFindMax(this.WalshBuff, this.DataCarriers));
+      
+      // Debug Walsh coefficients after transform
+      if (this.Output < 3 && s === 0) {
+        const sortedWalsh = Array.from(this.WalshBuff).map((val, idx) => ({val, idx}))
+          .sort((a, b) => Math.abs(b.val) - Math.abs(a.val)).slice(0, 3);
+        console.log(`Post-Walsh top 3: ${sortedWalsh.map(x => `${x.idx}:${x.val.toFixed(3)}`).join(', ')}`);
+      }
+      
+      const minResult = dspFindMin(this.WalshBuff, this.DataCarriers);
+      Min = minResult.min;
+      MinPos = minResult.index;
+      const maxResult = dspFindMax(this.WalshBuff, this.DataCarriers);
+      Max = maxResult.max;
+      MaxPos = maxResult.index;
       if (Math.abs(Max) > Math.abs(Min)) {
         code = MaxPos + this.DataCarriers;
+      // console.log(`Walsh s=${s}: MaxPos=${MaxPos}, code=${code} -> '${String.fromCharCode(code)}'`);
         Sig = Math.abs(Max);
         this.WalshBuff[MaxPos] = 0.0;
       } else {
@@ -111,39 +144,34 @@ export class MT63decoder {
         this.WalshBuff[MinPos] = 0.0;
       }
       Noise = dspRMS(this.WalshBuff, this.DataCarriers);
-      if (Noise > 0.0) {
+      if (Noise > 0.0)
         SNR = Sig / Noise;
-      } else {
-        SNR = 0.0;
-      }
-      let { mid, out } = dspLowPass2(SNR, this.DecodeSnrMid[s], this.DecodeSnrOut[s], this.W1, this.W2, this.W5);
-      this.DecodeSnrMid[s] = mid;
-      this.DecodeSnrOut[s] = out;
-      this.DecodePipe[this.DecodePtr + s] = code;  // Store numeric code, not character
+      else SNR = 0.0;
+      const snrResult = dspLowPass2(SNR, this.DecodeSnrMid[s], this.DecodeSnrOut[s], this.W1, this.W2, this.W5);
+      this.DecodeSnrMid[s] = snrResult.mid;
+      this.DecodeSnrOut[s] = snrResult.out;
+      this.DecodePipe[this.DecodePtr + s] = code;
+      
+      // Debug: print non-zero codes
+      // if (code > 0 && code < 128) {
+      //   console.log(`DecodePipe[${this.DecodePtr + s}] = ${code} ('${String.fromCharCode(code)}'), SNR=${this.DecodeSnrOut[s].toFixed(2)}`);
+      // }
     }
     this.IntlvPtr += this.ScanSize;
-    if (this.IntlvPtr >= this.IntlvSize) {
-      this.IntlvPtr = 0;
-    }
+    if (this.IntlvPtr >= this.IntlvSize) this.IntlvPtr = 0;
     this.DecodePtr += this.ScanLen;
-    if (this.DecodePtr >= this.DecodeSize) {
-      this.DecodePtr = 0;
-    }
-    ({ max: Max, index: MaxPos } = dspFindMax(this.DecodeSnrOut, this.ScanLen));
-    // Match C++ exactly: Output = DecodePipe[DecodePtr + MaxPos]
-    const outputIndex = this.DecodePtr + MaxPos;
-    if (outputIndex >= this.DecodeSize) {
-      console.log(`ERROR: Output index bounds exceeded! outputIndex=${outputIndex}, DecodeSize=${this.DecodeSize}`);
-      this.Output = 0;
-    } else {
-      this.Output = this.DecodePipe[outputIndex];
-      if (this.Output === undefined) {
-        console.log(`ERROR: DecodePipe[${outputIndex}] is undefined! DecodePtr=${this.DecodePtr}, MaxPos=${MaxPos}`);
-        this.Output = 0;
-      }
-    }
+    if (this.DecodePtr >= this.DecodeSize) this.DecodePtr = 0;
+    const finalMaxResult = dspFindMax(this.DecodeSnrOut, this.ScanLen);
+    Max = finalMaxResult.max;
+    MaxPos = finalMaxResult.index;
+    this.Output = this.DecodePipe[this.DecodePtr + MaxPos];
     this.SignalToNoise = Max;
     this.CarrOfs = MaxPos - (this.ScanLen - 1) / 2;
+    
+    // Debug output
+    // if (this.Output && this.Output !== 0) {
+    //   console.log(`MT63Decoder: Output char ${this.Output} ('${String.fromCharCode(this.Output)}'), SNR=${Max.toFixed(2)}, CarrOfs=${this.CarrOfs}`);
+    // }
 
     return 0;
   }

@@ -204,9 +204,9 @@ export function dspRMS(input: Float32Array | Float64Array | number[] | dspCmpx[]
 // inline double dspPower(double_buff *buff) { return dspPower(buff->Data,buff->Len); }
 // inline double dspPower(dspCmpx_buff *buff) { return dspPower(buff->Data,buff->Len); }
 export function dspPower(X: number | dspCmpx, Q?: number): number;
-export function dspPower(X: Float32Array | number[] | dspCmpx[], len: number): number;
-export function dspPower(I: Float32Array | number[], Q: number[], len: number): number;
-export function dspPower(x: number | dspCmpx | Float32Array | number[] | dspCmpx[], y?: number | number[], z?: number): number {
+export function dspPower(X: Float32Array | Float64Array | number[] | dspCmpx[], len: number): number;
+export function dspPower(I: Float32Array | Float64Array | number[], Q: Float32Array | Float64Array | number[], len: number): number;
+export function dspPower(x: number | dspCmpx | Float32Array | Float64Array | number[] | dspCmpx[], y?: number | Float32Array | Float64Array | number[], z?: number): number {
     if (typeof x === 'number') {
         let resp = x * x;
         if (typeof y === 'number') {

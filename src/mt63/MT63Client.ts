@@ -86,12 +86,17 @@ export class MT63Client {
     // console.log(`Sending string: ${text}`);
     for (let curChar of text) {
       let charCode = curChar.charCodeAt(0);
-      if (charCode > 2 * this.TX.DataInterleave) {
-        charCode = charCode % 2 * this.TX.DataInterleave;
+      // MT63 can only encode characters 0-127 (128 total)
+      // For short interleave (32), we have 2*32=64 valid codes
+      // For long interleave (64), we have 2*64=128 valid codes
+      const maxCode = 2 * this.TX.DataInterleave;
+      if (charCode >= maxCode) {
+        // Send escape character and modified character
         this.TX.sendChar(String.fromCharCode(127));
         this.flushToBuffer();
+        charCode = charCode % maxCode;
       }
-      this.TX.sendChar(curChar);
+      this.TX.sendChar(String.fromCharCode(charCode));
       this.flushToBuffer();
     }
     this.interleaveFlush();

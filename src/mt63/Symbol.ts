@@ -26,7 +26,7 @@ export const SymbolSepar = 200;      // the distance in samples between symbols 
 export const DataCarrSepar = 4;      // carriers must be spaced by 4 FFT bins
                               // (complex FFT length equals to SymbolLen)
 
-export const SymbolShape = [
+export const SymbolShape = new Float64Array([
      -0.00000000, //   0
      +0.00000665, //   1
      +0.00002657, //   2
@@ -539,4 +539,4 @@ export const SymbolShape = [
      +0.00005975, // 509
      +0.00002657, // 510
      +0.00000665, // 511
-];
+]);

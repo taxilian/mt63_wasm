@@ -15,7 +15,7 @@ export class MT63tx {
   private DataCarriers: number = 0;
   private FirstDataCarr: number = 0;
   private WindowLen = SymbolLen;
-  private TxWindow = SymbolShape;
+  private TxWindow = SymbolShape;  // This is a Float64Array constant
   private AliasFilterLen: number = 0;
   private DecimateRatio: number = 0;
   private InterleavePattern: readonly number[] = shortInterleavePattern;
@@ -24,16 +24,22 @@ export class MT63tx {
   // private CarrMarkAmpl: number;
   private Encoder!: MT63Encoder;
   private EncoderOld: MT63encoderOld = new MT63encoderOld();
-  private TxVect: number[] = [];
-  private dspPhaseCorr: number[] = [];
+  private TxVect: Int32Array = new Int32Array(0);  // C++ uses int*
+  private dspPhaseCorr: Int32Array = new Int32Array(0);  // C++ uses int*
   private WindowBuff = new DspCmpxBuff();
   private FFT: dsp_r2FFT = new dsp_r2FFT();
   private txmixer: DspCmpxMixer = new DspCmpxMixer();
   private Window = new dspCmpxOverlapWindow();
 
+  constructor(bandwidth: number = 1000, interleave: 0 | 1 = 0) {
+    const freq = 1500; // Default center frequency
+    const longInterleave = interleave === 1;
+    this.preset(freq, bandwidth, longInterleave);
+  }
+
   public Free(): void {
-    this.TxVect = [];
-    this.dspPhaseCorr = [];
+    this.TxVect = new Int32Array(0);
+    this.dspPhaseCorr = new Int32Array(0);
     // this.Encoder.Free();
     this.FFT.Free();
     this.Window.free();
@@ -91,8 +97,8 @@ export class MT63tx {
       this.InterleavePattern = shortInterleavePattern;
     }
 
-    this.TxVect.length = this.DataCarriers;
-    this.dspPhaseCorr.length = this.DataCarriers;
+    this.TxVect = new Int32Array(this.DataCarriers);
+    this.dspPhaseCorr = new Int32Array(this.DataCarriers);
 
     this.WindowBuff.ensureSpace(2 * this.WindowLen);
     this.WindowBuff.len = 2 * this.WindowLen;
@@ -101,7 +107,7 @@ export class MT63tx {
     if (this.FFT.preset(this.WindowLen)) {
       return false;
     }
-    this.Window.preset(this.WindowLen, SymbolSepar / 2, this.TxWindow);
+    this.Window.preset(this.WindowLen, SymbolSepar / 2, Array.from(this.TxWindow));
 
     // Preset the combining instance, NULL pointers in lieu of fixed filter shapes
     // blackman3 filter provides flat passband and sufficient out-of-band rejection
