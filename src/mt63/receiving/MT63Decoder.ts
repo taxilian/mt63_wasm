@@ -133,7 +133,7 @@ export class MT63decoder {
       const maxResult = dspFindMax(this.WalshBuff, this.DataCarriers);
       Max = maxResult.max;
       MaxPos = maxResult.index;
-      if (Math.abs(Max) > Math.abs(Min)) {
+      if (Math.abs(Max) >= Math.abs(Min)) {
         code = MaxPos + this.DataCarriers;
       // console.log(`Walsh s=${s}: MaxPos=${MaxPos}, code=${code} -> '${String.fromCharCode(code)}'`);
         Sig = Math.abs(Max);

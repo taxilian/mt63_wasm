@@ -115,6 +115,9 @@ export class MT63rx {
     // Output buffer
     Output: { Data: string[], Len: number } = { Data: [], Len: 0 };
     
+    // Character escape handling (for characters > 127)
+    private escape: number = 0;
+    
     // Process delay
     ProcdspDelay: number;
 
@@ -145,19 +148,16 @@ export class MT63rx {
             this.FirstDataCarr = Math.floor((centerFrequency - this.BandWidth / 2.0) * 256 / 500 + .5);
             this.AliasFilterLen = 128;
             this.DecimateRatio = 8;
-            console.log(`500Hz mode: FirstDataCarr calc = (${centerFrequency} - ${this.BandWidth}/2) * 256/500 = ${this.FirstDataCarr}`);
             break;
         case 1000:
             this.FirstDataCarr = Math.floor((centerFrequency - this.BandWidth / 2.0) * 128 / 500 + 0.5);
             this.AliasFilterLen = 64;
             this.DecimateRatio = 4;
-            console.log(`1000Hz mode: FirstDataCarr calc = (${centerFrequency} - ${this.BandWidth}/2) * 128/500 = ${this.FirstDataCarr}`);
             break;
         case 2000:
             this.FirstDataCarr = Math.floor((centerFrequency - this.BandWidth / 2.0) * 64 / 500 + 0.5);
             this.AliasFilterLen = 64;
             this.DecimateRatio = 2;
-            console.log(`2000Hz mode: FirstDataCarr calc = (${centerFrequency} - ${this.BandWidth}/2) * 64/500 = ${this.FirstDataCarr}`);
             break;
         default:
             throw new Error("Invalid bandwidth: " + this.BandWidth + " Valid values are 500, 1000, and 2000");
@@ -186,7 +186,6 @@ export class MT63rx {
         this.TestOfs.preset(-0.25 * (2.0 * Math.PI / this.WindowLen)); // for decoder tests only
 
         this.ProcdspDelay = this.IntegLen * SymbolSepar;
-        console.log(`ProcdspDelay calculation: IntegLen=${this.IntegLen} * SymbolSepar=${SymbolSepar} = ${this.ProcdspDelay}`);
         // Ensure we have enough buffer space for processing
         // The C++ code seems to handle this differently, so we need a larger buffer
         const minBufferSize = this.WindowLen * 8; // Ensure space for multiple windows
@@ -194,9 +193,8 @@ export class MT63rx {
         this.ProcLine = new DspDelayLine<dspCmpx>(requestedSize, Math.max(minBufferSize, requestedSize * 4));
         this.SyncProcPtr = 0;
 
-        // Apply masking to FirstDataCarr like the encoder does
-        const maskedFirstDataCarrSync = this.FirstDataCarr & this.WindowLenMask;
-        this.ScanFirst = maskedFirstDataCarrSync - scanMargin * DataCarrSepar; // first FFT bin to scan
+        // C++ doesn't mask FirstDataCarr when calculating ScanFirst
+        this.ScanFirst = this.FirstDataCarr - scanMargin * DataCarrSepar; // first FFT bin to scan
         if (this.ScanFirst < 0) {
             this.ScanFirst += this.WindowLen;
         }
@@ -223,14 +221,9 @@ export class MT63rx {
         }
 
         for (let c = (this.ScanFirst * SymbolSepar) & this.WindowLenMask, i = 0; i < this.ScanLen; i++) {
-            if (!this.FFT.Twiddle[c]) {
-                console.error(`FFT.Twiddle[${c}] is null/undefined. FFT.Size=${this.FFT.Size}, ScanFirst=${this.ScanFirst}, SymbolSepar=${SymbolSepar}`);
-                this.SyncPhCorr[i] = { re: 0, im: 0 };
-            } else {
-                this.SyncPhCorr[i].re = this.FFT.Twiddle[c].re * this.FFT.Twiddle[c].re -
-                                   this.FFT.Twiddle[c].im * this.FFT.Twiddle[c].im;
-                this.SyncPhCorr[i].im = 2 * this.FFT.Twiddle[c].re * this.FFT.Twiddle[c].im;
-            }
+            this.SyncPhCorr[i].re = this.FFT.Twiddle[c].re * this.FFT.Twiddle[c].re -
+                               this.FFT.Twiddle[c].im * this.FFT.Twiddle[c].im;
+            this.SyncPhCorr[i].im = 2 * this.FFT.Twiddle[c].re * this.FFT.Twiddle[c].im;
             c = (c + SymbolSepar) & this.WindowLenMask;
         }
 
@@ -284,10 +277,8 @@ export class MT63rx {
         this.DataProcPtr = (-this.ProcdspDelay);
 
         this.DataScanLen = DataCarriers + 2 * dataScanMargin;
-        // Apply masking to FirstDataCarr before using it, just like the encoder does
-        const maskedFirstDataCarr = this.FirstDataCarr & this.WindowLenMask;
-        this.DataScanFirst = (maskedFirstDataCarr - dataScanMargin * DataCarrSepar) & this.WindowLenMask;
-        console.log(`DataScanFirst: ${this.DataScanFirst}, FirstDataCarr: ${this.FirstDataCarr}, maskedFirstDataCarr: ${maskedFirstDataCarr}`);
+        // C++ doesn't mask FirstDataCarr when calculating DataScanFirst
+        this.DataScanFirst = this.FirstDataCarr - dataScanMargin * DataCarrSepar;
 
         this.RefDataSlice = new Array(this.DataScanLen);
         for (let i = 0; i < this.RefDataSlice.length; i++) {
@@ -377,11 +368,6 @@ export class MT63rx {
     }
 
     processAudio(input: Float32Array, sampleRate = 8000): string {
-        // Debug input audio
-        const nonZeroSamples = Array.from(input).filter(x => Math.abs(x) > 0.001).length;
-        if (this.Output.Len < 3) {
-            console.log(`processAudio: ${input.length} samples, ${nonZeroSamples} non-zero, max=${Math.max(...input).toFixed(3)}, min=${Math.min(...input).toFixed(3)}`);
-        }
         let s1: number;
         let s2: number;
 
@@ -401,17 +387,6 @@ export class MT63rx {
         const inputArray = Array.from(input);
         
         const inputSplitResp = this.InpSplit.process(inputArray);
-        
-        // Debug QuadrSplit output
-        const nonZeroComplex = inputSplitResp.filter(x => Math.abs(x.re) > 0.001 || Math.abs(x.im) > 0.001).length;
-        if (this.Output.Len < 10 || nonZeroComplex > 0) {
-            console.log(`QuadrSplit: ${inputSplitResp.length} complex samples, ${nonZeroComplex} non-zero`);
-            if (nonZeroComplex > 0) {
-                const maxRe = Math.max(...inputSplitResp.map(x => Math.abs(x.re)));
-                const maxIm = Math.max(...inputSplitResp.map(x => Math.abs(x.im)));
-                console.log(`QuadrSplit non-zero data: max re=${maxRe.toFixed(3)}, max im=${maxIm.toFixed(3)}`);
-            }
-        }
 
         this.ProcLine.process(inputSplitResp, inputSplitResp.length);
         //  TestOfs.Process(this.InpSplit.Output);
@@ -421,7 +396,12 @@ export class MT63rx {
 
         let syncCount = 0;
         let dataCount = 0;
-        while (this.SyncProcPtr + this.WindowLen < this.ProcLine.inpLen) {
+        // Check if we have enough data from the current position to process a full window
+        // In C++: while((SyncProcPtr+WindowLen) < ProcLine.InpLen)
+        // ProcLine.InpLen is the total available data length from InpPtr
+        // In our case, dataLen - dspDelay gives us the available processing data
+        const availableDataFromCurrent = this.ProcLine.dataLen - this.ProcLine.dspDelay;
+        while (this.SyncProcPtr + this.WindowLen <= availableDataFromCurrent) {
             syncCount++;
             // In C++, ProcLine.InpPtr + SyncProcPtr points to the data
             // In our case, we use line with offset
@@ -430,21 +410,26 @@ export class MT63rx {
             
             
             if (this.SyncPtr === this.SymbPtr) {
+                // Ensure we have accumulated enough data before attempting to process
+                // This is critical for WAV file processing where all data comes at once
+                if (this.SyncProcPtr < this.ProcdspDelay) {
+                    // Skip this processing cycle - not enough data accumulated yet
+                    this.SyncProcPtr += this.SyncStep;
+                    continue;
+                }
+                
                 const s1 = this.SyncProcPtr - this.ProcdspDelay +
                           (Math.floor(this.SyncSymbShift) - this.SymbPtr * this.SyncStep);
                 const s2 = s1 + SymbolSepar / 2;
                 
                 
                 // Calculate actual offsets into the line
-                // The key insight: s1 is relative to where we are in the current processing batch
-                // SyncProcPtr tracks position within the current input batch (can be negative after adjustment)
-                // We need to map this to absolute buffer position
-                // Current data starts at (dataLen - inpLen) and we're at position SyncProcPtr within that
-                const absolutePosition = this.ProcLine.dataLen - this.ProcLine.inpLen + this.SyncProcPtr;
-                const dataOffset1 = absolutePosition - this.ProcdspDelay + 
-                                  (Math.floor(this.SyncSymbShift) - this.SymbPtr * this.SyncStep);
-                const dataOffset2 = dataOffset1 + SymbolSepar / 2;
-                
+                // In C++: DataProcess(ProcLine.InpPtr + s1, ProcLine.InpPtr + s2, ...)
+                // In TypeScript: InpPtr is the whole array, and inpOffset tells us where input starts
+                // When s1 is negative, we need to go back from inpOffset into the delay buffer
+                // The delay buffer is at the beginning of the line array
+                const dataOffset1 = this.ProcLine.inpOffset + s1;
+                const dataOffset2 = this.ProcLine.inpOffset + s2;
                 
                 // Bounds check - also ensure we have enough history
                 if (dataOffset1 >= 0 && dataOffset1 + this.WindowLen <= this.ProcLine.line.length &&
@@ -460,8 +445,12 @@ export class MT63rx {
             }
             this.SyncProcPtr += this.SyncStep;
         }
-        this.SyncProcPtr -= this.ProcLine.inpLen;
-        this.DataProcPtr -= this.ProcLine.inpLen;
+        // In C++, ProcLine.InpPtr advances and pointers are adjusted
+        // In TypeScript, inpOffset advances to point to new data
+        // SyncProcPtr and DataProcPtr are relative to the current inpOffset
+        // So we don't need to subtract anything - they remain relative to the new offset
+        // this.SyncProcPtr -= this.ProcLine.inpLen;
+        // this.DataProcPtr -= this.ProcLine.inpLen;
 
         // Return any decoded text
         const decodedText = this.Output.Data.join('');
@@ -776,13 +765,6 @@ export class MT63rx {
         let I: number, Q: number, P: number;
         let Dtmp: dspCmpx;
         let Ftmp: dspCmpx;
-        
-        // Debug: Check input slices
-        if (this.Output.Len < 3) {
-            const evenNonZero = EvenSlice.filter(x => Math.abs(x.re) > 0.001 || Math.abs(x.im) > 0.001).length;
-            const oddNonZero = OddSlice.filter(x => Math.abs(x.re) > 0.001 || Math.abs(x.im) > 0.001).length;
-            console.log(`DataProcess input: Even ${evenNonZero}/${EvenSlice.length} non-zero, Odd ${oddNonZero}/${OddSlice.length} non-zero`);
-        }
 
         // Step 1: Apply frequency offset correction and window to time-domain slices
         P = (-2 * Math.PI * FreqOfs) / this.WindowLen;
@@ -819,98 +801,49 @@ export class MT63rx {
         // Step 2: Perform FFT on both slices
         this.FFT.coreProc(this.FFTbuff);
         this.FFT.coreProc(this.FFTbuff2);
-        
-        // Debug: Check if FFT has any signal and show power distribution
-        if (this.Output.Len < 3) {
-            let maxPower = 0;
-            let maxBin = 0;
-            const powerAbove1 = [];
-            for (let b = 0; b < this.WindowLen; b++) {
-                const power = dspPower(this.FFTbuff[b]);
-                if (power > maxPower) {
-                    maxPower = power;
-                    maxBin = b;
-                }
-                if (power > 1.0) {
-                    powerAbove1.push(`${b}:${power.toFixed(1)}`);
-                }
-            }
-            console.log(`FFT max power: ${maxPower.toFixed(6)} at bin ${maxBin}`);
-            if (powerAbove1.length > 0) {
-                console.log(`FFT bins with power > 1.0: ${powerAbove1.join(', ')}`);
-            }
-        }
 
         // Step 3: Extract data carriers and perform differential phase decoding
         incr = (TimeDist * DataCarrSepar) & this.WindowLenMask;
         p = (TimeDist * this.DataScanFirst) & this.WindowLenMask;
-
-        // Debug: Show which bins we're scanning
-        if (this.Output.Len < 3) {
-            console.log(`DataProcess scanning bins starting at ${this.DataScanFirst}, DataCarrSepar=${DataCarrSepar}`);
-            console.log(`DataScanLen=${this.DataScanLen}, processing ${this.DataScanLen} carriers`);
-            // Calculate expected carrier positions
-            const expectedCarriers = [];
-            for (let idx = 0, bin = this.DataScanFirst; idx < Math.min(10, this.DataScanLen); idx += 2) {
-                expectedCarriers.push(bin);
-                bin = (bin + DataCarrSepar) & this.WindowLenMask;
-            }
-            console.log(`Expected first 10 carrier bins: ${expectedCarriers.join(', ')}`);
-        }
         
         for (c = this.DataScanFirst, i = 0; i < this.DataScanLen; ) {
             // Process first carrier from FFTbuff
             // Note: c is already masked in the loop, don't mask again
             
-            // Debug first few bins
-            if (this.Output.Len < 3 && i < 10) {
-                const power = dspPower(this.FFTbuff[c]);
-                console.log(`  Carrier[${i}] from FFTbuff bin[${c}]: power=${power.toFixed(3)}`);
-            }
+            // Mask c when accessing FFT buffer
+            const maskedC = c & this.WindowLenMask;
             
             Phas = this.FFT.Twiddle[p];
             Dtmp = dspCmpxMult(this.RefDataSlice[i], Phas);
-            this.DataVect[i] = dspCmpxMultConj(this.FFTbuff[c], Dtmp);
-            
-            // Debug differential decoding
-            if (this.Output.Len < 3 && i === 8) { // Carrier 8 has strong signal
-                console.log(`  Carrier[8] differential decode:`);
-                console.log(`    RefDataSlice[8]: re=${this.RefDataSlice[i].re.toFixed(3)}, im=${this.RefDataSlice[i].im.toFixed(3)}`);
-                console.log(`    FFTbuff[${c}]: re=${this.FFTbuff[c].re.toFixed(3)}, im=${this.FFTbuff[c].im.toFixed(3)}`);
-                console.log(`    DataVect[8]: re=${this.DataVect[i].re.toFixed(3)}, im=${this.DataVect[i].im.toFixed(3)}`);
-            }
+            this.DataVect[i] = dspCmpxMultConj(this.FFTbuff[maskedC], Dtmp);
             
             
-            P = dspPower(this.FFTbuff[c]);
+            P = dspPower(this.FFTbuff[maskedC]);
             const pwrResult = dspLowPass2(P, this.DataPwrMid[i], this.DataPwrOut[i], 
                                          this.dW1, this.dW2, this.dW5);
             this.DataPwrMid[i] = pwrResult.mid;
             this.DataPwrOut[i] = pwrResult.out;
             
-            this.RefDataSlice[i] = this.FFTbuff[c];
+            this.RefDataSlice[i] = this.FFTbuff[maskedC];
             i++; // Increment i after first carrier
             c = (c + DataCarrSepar) & this.WindowLenMask;
             p = (p + incr) & this.WindowLenMask;
             
             // Process second carrier from FFTbuff2 (if within bounds)
             if (i < this.DataScanLen) {
-                // Debug
-                if (this.Output.Len < 3 && i < 10) {
-                    const power2 = dspPower(this.FFTbuff2[c]);
-                    console.log(`  Carrier[${i}] from FFTbuff2 bin[${c}]: power=${power2.toFixed(3)}`);
-                }
+                const maskedC2 = c & this.WindowLenMask;
                 
                 Phas = this.FFT.Twiddle[p];
                 Dtmp = dspCmpxMult(this.RefDataSlice[i], Phas);
-                this.DataVect[i] = dspCmpxMultConj(this.FFTbuff2[c], Dtmp);
+                this.DataVect[i] = dspCmpxMultConj(this.FFTbuff2[maskedC2], Dtmp);
                 
-                P = dspPower(this.FFTbuff2[c]);
+                P = dspPower(this.FFTbuff2[maskedC2]);
                 const pwrResult2 = dspLowPass2(P, this.DataPwrMid[i], this.DataPwrOut[i], 
                                               this.dW1, this.dW2, this.dW5);
                 this.DataPwrMid[i] = pwrResult2.mid;
                 this.DataPwrOut[i] = pwrResult2.out;
                 
-                this.RefDataSlice[i] = this.FFTbuff2[c];
+                this.RefDataSlice[i] = this.FFTbuff2[maskedC2];
                 i++; // Increment i after second carrier
                 c = (c + DataCarrSepar) & this.WindowLenMask;
                 p = (p + incr) & this.WindowLenMask;
@@ -920,26 +853,8 @@ export class MT63rx {
         // Step 4: Apply additional frequency correction to differential decoded data
         P = (-TimeDist * 2 * Math.PI * FreqOfs) / this.WindowLen;
         Freq = new dspCmpx(Math.cos(P), Math.sin(P));
-
-        // Debug DataPipe state
-        if (this.Output.Len < 3 || (this.Output.Len > 30 && this.Output.Len < 35)) {
-            const pipeNonZero = this.DataPipe[this.DataPipePtr].filter(x => Math.abs(x.re) > 0.001 || Math.abs(x.im) > 0.001).length;
-            console.log(`DataPipe[${this.DataPipePtr}]: ${pipeNonZero}/${this.DataPipe[this.DataPipePtr].length} non-zero`);
-        }
         
-        for (i = 0; i < this.DataScanLen; i++) {
-            Ftmp = dspCmpxMult(this.DataVect[i], Freq);
-            this.DataVect[i] = this.DataPipe[this.DataPipePtr][i];
-            this.DataPipe[this.DataPipePtr][i] = Ftmp;
-        }
-        this.DataPipePtr = (this.DataPipePtr + 1) % this.DataPipeLen;
-
         // Step 5: Convert to phase values (soft decisions)
-        if (this.Output.Len < 5) {
-            const nonZeroVect = this.DataVect.filter(x => Math.abs(x.re) > 0.001 || Math.abs(x.im) > 0.001).length;
-            const nonZeroPwr = this.DataPwrOut.filter(x => x > 0.001).length;
-            console.log(`Before phase calc: DataVect ${nonZeroVect}/${this.DataVect.length} non-zero, DataPwrOut ${nonZeroPwr}/${this.DataPwrOut.length} non-zero`);
-        }
         
         for (i = 0; i < this.DataScanLen; i++) {
             if (this.DataPwrOut[i] > 0.0) {
@@ -952,32 +867,34 @@ export class MT63rx {
             }
         }
 
-        // Step 6: Pass to decoder
-        // Debug: Check what data we're passing to decoder
-        if (this.Output.Len < 10) {
-            const nonZeroCount = this.DatadspPhase.filter(x => Math.abs(x) > 0.001).length;
-            console.log(`Decoder input: ${nonZeroCount}/${this.DatadspPhase.length} non-zero values, first few: ${this.DatadspPhase.slice(0,4).map(x => x.toFixed(3)).join(',')}`);
-            if (nonZeroCount > 0) {
-                const range = `min=${Math.min(...this.DatadspPhase).toFixed(3)}, max=${Math.max(...this.DatadspPhase).toFixed(3)}`;
-                console.log(`DatadspPhase range: ${range}`);
-            }
+        // Apply DataPipe delay line AFTER phase calculation
+        for (i = 0; i < this.DataScanLen; i++) {
+            Ftmp = dspCmpxMult(this.DataVect[i], Freq);
+            this.DataVect[i] = this.DataPipe[this.DataPipePtr][i];
+            this.DataPipe[this.DataPipePtr][i] = Ftmp;
         }
-        
+        this.DataPipePtr = (this.DataPipePtr + 1) % this.DataPipeLen;
+
+        // Step 6: Pass to decoder
         const decoderResult = this.Decoder.Process(new Float64Array(this.DatadspPhase));
         if (this.Decoder.Output !== 0) {  // Now Output is numeric
-            const code = this.Decoder.Output;
+            let c = this.Decoder.Output;
             
-            // Log sync status for debugging
-            // Convert numeric code to character
-            let char = '';
-            if (code >= 32 && code <= 126) {
-                char = String.fromCharCode(code);
-            } else if (code === 10 || code === 13) {
-                char = String.fromCharCode(code); // newline/carriage return
-            } else {
-                char = `<${code}>`;  // Show control characters as <code>
+            // Implement C++ character filtering logic
+            if ((c < 8) && this.escape === 0) {
+                return; // Skip control characters < 8
             }
-            this.Output.Data.push(char);
+            if (c === 127) {
+                this.escape = 1;
+                return;
+            }
+            if (this.escape) {
+                c += 128;
+                this.escape = 0;
+            }
+            
+            // Convert to character and add to output
+            this.Output.Data.push(String.fromCharCode(c));
             this.Output.Len++;
         }
     }
