@@ -14,17 +14,9 @@ const DataCarriers = 64;
 
 export class MT63rx {
     /**
-     * The buffer we use to store the audio data before we send it to be processed.
-     */
-    private buffer?: Float32Array;
-    /**
      * The buffer we use to store the audio data after we downsample it.
      */
     private resampleBuffer?: Float32Array;
-    /**
-     * The size of the data in the buffer.
-     */
-    dataSize = 0;
 
     Decoder: MT63decoder;
     private FirstDataCarr: number = 0;
@@ -319,52 +311,29 @@ export class MT63rx {
 
     processAudioResample(input: Float32Array, sampleRate: number): string {
         const ratioWeight = sampleRate / desiredSampleRate;
+        
         if (ratioWeight === 1) {
             return this.processAudio(input);
+        } else if (ratioWeight < 1) {
+            // Match C++ error handling for unsupported sample rates
+            console.error(`Sample rate ${sampleRate} is less than target ${desiredSampleRate}`);
+            return ""; // Return empty string instead of error message for TypeScript
         }
-
-        let text = '';
-
-        /**
-         * The size of data we need to downsample evenly to get to the desired sample rate.
-         */
-        const desiredBufferSize = input.length * (sampleRate / desiredSampleRate);
-        if (!this.buffer || this.buffer.length < desiredBufferSize) {
-            // We need to downsample the audio data before we can process it.
-            // So make sure the buffer is big enough to downsample evenly.
-            const data = this.buffer;
-            // console.log(`Resizing buffer to ${desiredBufferSize}`);
-            this.buffer = new Float32Array(desiredBufferSize);
-            if (data) {
-                this.buffer.set(data);
-            }
+        
+        // We need to downsample (ratioWeight > 1)
+        // Calculate output size similar to C++: len / ratioWeight + 10 (for safety margin)
+        const maxOutputSize = Math.ceil(input.length / ratioWeight) + 10;
+        
+        // Ensure resampleBuffer is large enough
+        if (!this.resampleBuffer || this.resampleBuffer.length < maxOutputSize) {
+            this.resampleBuffer = new Float32Array(maxOutputSize);
         }
-
-        const remaining = this.buffer.length - this.dataSize;
-        if (input.length < remaining) {
-            // We don't have enough data to downsample yet.
-            this.buffer.set(input, this.dataSize);
-            this.dataSize += input.length;
-        } else {
-            // we need to split the array;
-            this.buffer.set(input.subarray(0, remaining), this.dataSize);
-            this.dataSize += remaining;
-
-            const resampledSize = Math.ceil(this.buffer.length * (desiredSampleRate / sampleRate));
-            if (!this.resampleBuffer || this.resampleBuffer.length < resampledSize) {
-                // console.log(`Resizing resample buffer to ${resampledSize}`);
-                this.resampleBuffer = new Float32Array(resampledSize);
-            }
-
-            const size = downSample(this.buffer, this.dataSize, sampleRate, desiredSampleRate, this.resampleBuffer);
-            text = this.processAudio(this.resampleBuffer.subarray(0, size));
-
-            // We should be able to keep using the same buffer.
-            let remnantSize = input.length - remaining;
-            this.buffer.set(input.subarray(remaining), 0);
-            this.dataSize = remnantSize;
-        }
-        return text;
+        
+        // Call downSample directly on the input and store in resampleBuffer
+        const newLen = downSample(input, input.length, sampleRate, desiredSampleRate, this.resampleBuffer);
+        
+        // Process the resampled audio
+        return this.processAudio(this.resampleBuffer.subarray(0, newLen));
     }
 
     processAudio(input: Float32Array, sampleRate = 8000): string {
