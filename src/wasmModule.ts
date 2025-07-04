@@ -1,9 +1,9 @@
 /// <reference path="../emscripten.d.ts" />
 
-const Module: (mod?: Partial<typeof EmscriptenModule>) => Promise<typeof EmscriptenModule>
-     = require('./mt63Wasm');
+// Note: We use dynamic import for the WASM module since it needs to be loaded asynchronously
+// const Module = require('./mt63Wasm');
 
-import {polyfill} from './polyfill';
+import {polyfill} from './polyfill.js';
 
 let mod: typeof EmscriptenModule;
 let polyfillRun = false;
@@ -65,7 +65,13 @@ function initMod(customizeFn?: ModuleCustomFn): Promise<typeof wasmModule> {
     if (customizeFn) {
         moduleTpl = customizeFn(moduleTpl);
     }
-    Module(moduleTpl).catch(rej);
+    
+    // Use dynamic import instead of require for ES module compatibility
+    const modulePromise = new Function('return import("./mt63Wasm.js")')() as Promise<any>;
+    modulePromise.then((moduleImport: any) => {
+      const Module = moduleImport.default || moduleImport;
+      Module(moduleTpl).catch(rej);
+    }).catch(rej);
   });
 }
 // By the time this runs we can safely start initializing things

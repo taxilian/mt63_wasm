@@ -1,7 +1,7 @@
 
-# Written to work with cmake 3.0
-cmake_minimum_required (VERSION 3.0)
-set (CMAKE_BACKWARDS_COMPATIBILITY 3.0)
+# Written to work with cmake 3.5
+cmake_minimum_required (VERSION 3.5)
+set (CMAKE_BACKWARDS_COMPATIBILITY 3.5)
 SET(CMAKE_EXECUTABLE_SUFFIX ".js")
 
 project(fldigi_mt63)

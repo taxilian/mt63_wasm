@@ -118,11 +118,6 @@ declare namespace FS {
   interface FSNode {}
   interface ErrnoError {}
 
-  var ignorePermissions: boolean;
-  var trackingDelegate: any;
-  var tracking: any;
-  var genericErrors: any;
-
   //
   // paths
   //

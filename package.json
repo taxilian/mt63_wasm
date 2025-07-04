@@ -9,10 +9,8 @@
     "test": "test"
   },
   "scripts": {
-    "test": "jest",
     "build": "tsc -p . && cp -v native_build/mt63Wasm.* dist/",
-    "build_native": "./prepemscripten.sh && cmake --build native_build/",
-    "prepublish": "tsc -p . && cp -v native_build/mt63Wasm.* dist/"
+    "build_native": "./prepemscripten.sh && cmake --build native_build/"
   },
   "repository": {
     "type": "git",
@@ -25,15 +23,10 @@
   },
   "homepage": "https://github.com/taxilian/mt63_wasm#readme",
   "devDependencies": {
-    "@types/jest": "~23.3.10",
-    "@types/webpack": "^4.4.32",
-    "@types/webpack-env": "^1.13.9",
-    "jest": "^27.0.3",
-    "ts-jest": "^27.0.2",
+    "@types/emscripten": "^1.40.1",
+    "@types/node": "^24.0.10",
     "ts-node": "^8.2.0",
-    "tsc-watch": "^2.2.1",
-    "typescript": "^3.5.1",
-    "webpack": "^4.32.2"
+    "typescript": "^5.0.0"
   },
   "files": [
     "dist/",

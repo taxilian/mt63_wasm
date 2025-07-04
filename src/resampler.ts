@@ -15,7 +15,7 @@ function getBufferConstructor<T extends Float32Array | Float64Array | number[]>(
 }
 
 export class Resampler<T extends Float32Array|Float64Array> {
-    BufferType = getBufferConstructor(this.inputBuffer);
+    BufferType: any;
     outputBuffer!: T;
     lastOutput!: T;
 
@@ -28,6 +28,7 @@ export class Resampler<T extends Float32Array|Float64Array> {
         //Input Sample Rate:
         this.fromSampleRate = +fromSampleRate;
         //Output Sample Rate:
+        this.BufferType = getBufferConstructor(this.inputBuffer);
         this.toSampleRate = +toSampleRate;
         //Number of channels:
         this.channels = channels | 0;

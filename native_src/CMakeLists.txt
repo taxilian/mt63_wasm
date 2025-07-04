@@ -1,6 +1,6 @@
-# Written to work with cmake 3.0
-cmake_minimum_required (VERSION 3.0)
-set (CMAKE_BACKWARDS_COMPATIBILITY 3.0)
+# Written to work with cmake 3.5
+cmake_minimum_required (VERSION 3.5)
+set (CMAKE_BACKWARDS_COMPATIBILITY 3.5)
 SET(CMAKE_EXECUTABLE_SUFFIX ".js")
 
 project(mt63Wasm)
@@ -13,12 +13,12 @@ if (NOT BUILD_ASMJS)
     # set (SOURCE_MAP_PARAM "-gsource-map --source-map-base 'http://localhost:8080/'")
     set (SOURCE_MAP_PARAM "")
 
-    set (DEFAULT_CFLAGS "-s WASM=1 -O3 -s MODULARIZE=1 -Wno-deprecated-register -Wno-warn-absolute-paths -s NO_EXIT_RUNTIME=1 -s ENVIRONMENT=web -flto -ftree-vectorize -s ALLOW_MEMORY_GROWTH=1 -s PRECISE_F32=1 -flto -ftree-vectorize --emit-symbol-map -Werror ${SOURCE_MAP_PARAM} -s EXPORTED_FUNCTIONS=\"${LIB_EXPORTS}\" -s 'EXPORTED_RUNTIME_METHODS=ccall,cwrap'")
-    set (DEBUG_CFLAGS "-s WASM=1 -O3 -s ASSERTIONS=0 -s MODULARIZE=1 -Wno-deprecated-register -Wno-warn-absolute-paths -s NO_EXIT_RUNTIME=1 -s ENVIRONMENT=web -s ALLOW_MEMORY_GROWTH=1 -s PRECISE_F32=1 -flto -ftree-vectorize --emit-symbol-map -Werror ${SOURCE_MAP_PARAM} -s EXPORTED_FUNCTIONS=\"${LIB_EXPORTS}\" -s 'EXPORTED_RUNTIME_METHODS=ccall,cwrap'")
+    set (DEFAULT_CFLAGS "-s WASM=1 -O3 -s MODULARIZE=1 -Wno-deprecated-register -Wno-warn-absolute-paths -s NO_EXIT_RUNTIME=1 -s ENVIRONMENT=web -flto -ftree-vectorize -s ALLOW_MEMORY_GROWTH=1 -s PRECISE_F32=1 -flto -ftree-vectorize --emit-symbol-map ${SOURCE_MAP_PARAM} -s EXPORTED_FUNCTIONS=\"${LIB_EXPORTS}\" -s 'EXPORTED_RUNTIME_METHODS=ccall,cwrap,HEAPF32'")
+    set (DEBUG_CFLAGS "-s WASM=1 -O3 -s ASSERTIONS=0 -s MODULARIZE=1 -Wno-deprecated-register -Wno-warn-absolute-paths -s NO_EXIT_RUNTIME=1 -s ENVIRONMENT=web -s ALLOW_MEMORY_GROWTH=1 -s PRECISE_F32=1 -flto -ftree-vectorize --emit-symbol-map ${SOURCE_MAP_PARAM} -s EXPORTED_FUNCTIONS=\"${LIB_EXPORTS}\" -s 'EXPORTED_RUNTIME_METHODS=ccall,cwrap,HEAPF32'")
     set(LIBNAME mt63Wasm)
 else()
-    set (DEFAULT_CFLAGS "-s \"BINARYEN_METHOD='asmjs'\" -O3 -s MODULARIZE=1 -Wno-deprecated-register -Wno-warn-absolute-paths -s NO_EXIT_RUNTIME=1 -s ENVIRONMENT=web -flto -ftree-vectorize -s TOTAL_MEMORY=67108864 -s PRECISE_F32=1 --emit-symbol-map -Werror -s EXPORTED_FUNCTIONS=\"${LIB_EXPORTS}\" -s 'EXPORTED_RUNTIME_METHODS=ccall, cwrap'")
-    set (DEBUG_CFLAGS "-s \"BINARYEN_METHOD='asmjs'\" -O3 --minify 0 -s MODULARIZE=1 -Wno-deprecated-register -Wno-warn-absolute-paths -s NO_EXIT_RUNTIME=1 -s ENVIRONMENT=web -flto -ftree-vectorize -s TOTAL_MEMORY=67108864 -s PRECISE_F32=1 --emit-symbol-map -Werror -s EXPORTED_FUNCTIONS=\"${LIB_EXPORTS}\" -s 'EXPORTED_RUNTIME_METHODS=ccall, cwrap'")
+    set (DEFAULT_CFLAGS "-s \"BINARYEN_METHOD='asmjs'\" -O3 -s MODULARIZE=1 -Wno-deprecated-register -Wno-warn-absolute-paths -s NO_EXIT_RUNTIME=1 -s ENVIRONMENT=web -flto -ftree-vectorize -s TOTAL_MEMORY=67108864 -s PRECISE_F32=1 --emit-symbol-map -s EXPORTED_FUNCTIONS=\"${LIB_EXPORTS}\" -s 'EXPORTED_RUNTIME_METHODS=ccall, cwrap, HEAPF32'")
+    set (DEBUG_CFLAGS "-s \"BINARYEN_METHOD='asmjs'\" -O3 --minify 0 -s MODULARIZE=1 -Wno-deprecated-register -Wno-warn-absolute-paths -s NO_EXIT_RUNTIME=1 -s ENVIRONMENT=web -flto -ftree-vectorize -s TOTAL_MEMORY=67108864 -s PRECISE_F32=1 --emit-symbol-map -s EXPORTED_FUNCTIONS=\"${LIB_EXPORTS}\" -s 'EXPORTED_RUNTIME_METHODS=ccall, cwrap, HEAPF32'")
     set(LIBNAME mt63Wasm)
 endif()
 

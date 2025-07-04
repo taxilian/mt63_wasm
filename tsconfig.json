@@ -10,23 +10,21 @@
     "sourceMap": true,
     "baseUrl": ".",
     "declaration": true,
+    "lib": [
+      "es2020",
+      "dom",
+      "dom.iterable"
+    ],
     "types": [
-      "jest",
-      "webpack",
-      "webpack-env"
+      "emscripten",
+      "node"
     ],
     "outDir": "dist",
     "paths": {
       "@/*": [
         "src/*"
       ]
-    },
-    "lib": [
-      "es5",
-      "dom",
-      "dom.iterable",
-      "scripthost"
-    ]
+    }
   },
   "include": [
     "src/**/*.ts",
