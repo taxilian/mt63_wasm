@@ -89,7 +89,7 @@ export class DspQuadrSplit {
         const maxIndex = this.tapLen - this.len;
         
         let i = 0;
-        for (; i <= maxIndex; i += this.rate) {
+        for (; i < maxIndex; i += this.rate) {
             let sumI = 0.0;
             let sumQ = 0.0;
             
