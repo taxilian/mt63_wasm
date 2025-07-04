@@ -23,6 +23,7 @@ export namespace wasmModule {
   export let _lzmaDecode: (str: number, len: number) => number;
   export let _getLzmaOutputPtr: () => number;
   export let _getLzmaOutputStr: () => string;
+  export let _downSampleCpp: (inputPtr: number, bufferLength: number, from: number, to: number, outputPtr: number) => number;
   export let readyDfd: Promise<typeof wasmModule>;
   export let mod: typeof EmscriptenModule;
 }
@@ -52,6 +53,7 @@ function initMod(customizeFn?: ModuleCustomFn): Promise<typeof wasmModule> {
           wasmModule._lzmaDecode = mod.cwrap('lzmaDecode', 'number', ['number', 'number']);
           wasmModule._getLzmaOutputStr = mod.cwrap('getLzmaOutput', 'string');
           wasmModule._getLzmaOutputPtr = mod.cwrap('getLzmaOutput', 'number');
+          wasmModule._downSampleCpp = mod.cwrap('downSampleCpp', 'number', ['number', 'number', 'number', 'number', 'number']) as any;
           res(wasmModule);
         },
         locateFile: function locateFile(fname: string) {
@@ -65,7 +67,7 @@ function initMod(customizeFn?: ModuleCustomFn): Promise<typeof wasmModule> {
     if (customizeFn) {
         moduleTpl = customizeFn(moduleTpl);
     }
-    
+
     // Use dynamic import instead of require for ES module compatibility
     const modulePromise = new Function('return import("./mt63Wasm.js")')() as Promise<any>;
     modulePromise.then((moduleImport: any) => {

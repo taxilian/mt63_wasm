@@ -46,6 +46,8 @@ declare namespace EmscriptenModule {
   function cwrap<TR, A1, A2>(ident: string, returnType: string, argTypes: [string, string]): (a1: A1, a2: A2) => TR;
   function cwrap<TR, A1, A2, A3>(ident: string, returnType: string, argTypes: [string, string, string]): (a1: A1, a2: A2, a3: A3) => TR;
   function cwrap<TR, A1, A2, A3, A4>(ident: string, returnType: string, argTypes: [string, string, string, string]): (a1: A1, a2: A2, a3: A3, a4: A4) => TR;
+  function cwrap<TR, A1, A2, A3, A4, A5>(ident: string, returnType: string, argTypes: [string, string, string, string, string]): (a1: A1, a2: A2, a3: A3, a4: A4, a5: A5) => TR;
+  function cwrap<TR, A1, A2, A3, A4, A5, A6>(ident: string, returnType: string, argTypes: [string, string, string, string, string, string]): (a1: A1, a2: A2, a3: A3, a4: A4, a5: A5, a6: A6) => TR;
 
   function setValue(ptr: number, value: any, type: string, noSafe?: boolean): void;
   function getValue(ptr: number, type: string, noSafe?: boolean): number;

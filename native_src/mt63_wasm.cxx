@@ -1,4 +1,3 @@
-
 #include "mt63/mt63base.h"
 #include <stdio.h>
 #include <memory>
@@ -189,7 +188,7 @@ extern "C" {
     }
 
     // Note: for reasons that I haven't been able to track down, len must be
-    // an exact multiple of (sampleRate / 8000) -- so if your sample rate is 
+    // an exact multiple of (sampleRate / 8000) -- so if your sample rate is
     // 48000 then it needs to be evenly divisible by 6. Otherwise you end up
     // with output that isn't always the same length and realloc calls elsewhere
     // in the code blow up and die.
@@ -209,7 +208,7 @@ extern "C" {
         }
         const auto newLen = downSample(samples, len, sampleRate, k_SAMPLERATE, &inputBuffer[0]);
         // printf("After downsample length is %lu\n", newLen);
-        
+
         return processAudio(&inputBuffer[0], newLen);
     }
 
@@ -265,6 +264,11 @@ extern "C" {
 
     BufferType* getBuffer() {
         return &buffer[0];
+    }
+
+    // Export the C++ downSample function for testing
+    size_t downSampleCpp(float* input, size_t bufferLength, float from, float to, float* output) {
+        return downSample(input, bufferLength, from, to, output);
     }
 
 }
