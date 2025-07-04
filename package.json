@@ -10,7 +10,8 @@
   },
   "scripts": {
     "build": "tsc -p . && cp -v native_build/mt63Wasm.* dist/",
-    "build_native": "./prepemscripten.sh && cmake --build native_build/"
+    "build_native": "./prepemscripten.sh && cmake --build native_build/",
+    "build_all": "npm run build_native && npm run build"
   },
   "repository": {
     "type": "git",
