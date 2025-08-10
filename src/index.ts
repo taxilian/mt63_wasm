@@ -1,14 +1,14 @@
 
-import { wasmModule } from "./wasmModule";
+import { wasmModule } from './wasmModule.js';
 
 export {
     setFileLocation,
     initialize,
-} from './wasmModule';
+} from './wasmModule.js';
 
 export {
     Resampler
-} from './resampler';
+} from './resampler.js';
 
 const readyPromise = wasmModule.readyDfd;
 
@@ -17,4 +17,4 @@ export {
     readyPromise,
 };
 
-export {MT63Client} from './MT63Client';
+export {MT63Client} from './MT63Client.js';

@@ -1,11 +1,11 @@
-import { DspCmpxBuff, dspWindowBlackman3 } from "./dsp";
-import { MT63Encoder, MT63encoderOld } from "./MT63encoder";
-import { longInterleavePattern, shortInterleavePattern } from "./mt63intl";
-import { DataCarrSepar, SymbolLen, SymbolSepar, SymbolShape } from './Symbol';
-import { dspCmpxOverlapWindow } from './dspCmpxOverlapWindow';
-import { dsp_r2FFT } from './FFT';
-import { DspQuadrComb } from './dspQuadrComb';
-import { DspCmpxMixer } from './dspCmpxMixer';
+import { DspCmpxBuff, dspWindowBlackman3 } from "./dsp.js";
+import { MT63Encoder, MT63encoderOld } from "./MT63encoder.js";
+import { longInterleavePattern, shortInterleavePattern } from './mt63intl.js';
+import { DataCarrSepar, SymbolLen, SymbolSepar, SymbolShape } from './Symbol.js';
+import { dspCmpxOverlapWindow } from './dspCmpxOverlapWindow.js';
+import { dsp_r2FFT } from './FFT.js';
+import { DspQuadrComb } from './dspQuadrComb.js';
+import { DspCmpxMixer } from './dspCmpxMixer.js';
 
 
 export class MT63tx {

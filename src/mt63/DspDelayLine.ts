@@ -1,4 +1,4 @@
-import { DspSeq } from "./dsp";
+import { DspSeq } from './dsp.js';
 
 export class DspDelayLine<T> {
   public line: T[] = []; // line storage
@@ -6,7 +6,6 @@ export class DspDelayLine<T> {
   public lineSize: number; // allocated size
   public dataLen: number; // length of the valid data
   public inpPtr: T[]; // The line array (in C++ this is a pointer into line)
-  public inpData: T[]; // alias for inpPtr for compatibility
   public inpOffset: number = 0; // offset into line for the most recent input
   public inpLen: number; // number of samples for the most recent input
 
@@ -24,7 +23,6 @@ export class DspDelayLine<T> {
     this.clearArray(this.line, this.lineSize);
     this.inpOffset = this.dataLen;
     this.inpPtr = this.line; // In TypeScript, we'll use the whole array with offset
-    this.inpData = this.inpPtr; // alias
     this.inpLen = 0;
   }
 
@@ -43,7 +41,6 @@ export class DspDelayLine<T> {
     // Update offset to point to the start of newly added data
     this.inpOffset = this.dataLen;
     this.inpPtr = this.line; // Still the same array
-    this.inpData = this.inpPtr; // keep alias in sync
     this.inpLen = len;
     this.dataLen += len;
     return 0;

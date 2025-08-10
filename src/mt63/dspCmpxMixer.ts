@@ -1,4 +1,4 @@
-import { dspCmpx, DspCmpxBuff } from './dsp';
+import { dspCmpx, DspCmpxBuff } from './dsp.js';
 
 export class DspCmpxMixer {
     public dspPhase: number = 0;

@@ -1,4 +1,4 @@
-import { dspCmpx, DspCmpxBuff } from "./dsp";
+import { dspCmpx, DspCmpxBuff } from './dsp.js';
 
 export class dspCmpxOverlapWindow {
     public Output: DspCmpxBuff = new DspCmpxBuff();

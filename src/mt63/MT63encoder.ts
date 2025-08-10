@@ -1,4 +1,4 @@
-import { dspPowerOf2, dspWalshInvTrans } from './dsp';
+import { dspPowerOf2, dspWalshInvTrans } from './dsp.js';
 export class MT63encoderOld {
   public Output: boolean[] = [];
 

@@ -1,19 +1,20 @@
 {
   "compilerOptions": {
     "target": "esnext",
-    "module": "esnext",
+    "module": "nodenext",
     "strict": true,
     "importHelpers": true,
-    "moduleResolution": "node",
+    "moduleResolution": "nodenext",
     "esModuleInterop": true,
     "allowSyntheticDefaultImports": true,
     "sourceMap": true,
     "baseUrl": ".",
     "declaration": true,
     "lib": [
-      "es2020",
+      "es5",
       "dom",
-      "dom.iterable"
+      "dom.iterable",
+      "scripthost"
     ],
     "types": [
       "emscripten",

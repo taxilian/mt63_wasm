@@ -1,4 +1,4 @@
-import { MT63tx } from './MT63tx';
+import { MT63tx } from './MT63tx.js';
 
 export class MT63Client {
   TX = new MT63tx();

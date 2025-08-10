@@ -1,6 +1,6 @@
 
-import { wasmModule } from "./wasmModule";
-import {Resampler} from './resampler';
+import { wasmModule } from './wasmModule.js';
+import {Resampler} from './resampler.js';
 
 function subarray(arr: Float32Array | number[], len: number) {
   if ("subarray" in arr) {

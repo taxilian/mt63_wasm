@@ -1,4 +1,4 @@
-import { dspCmpx } from "./dsp";
+import { dspCmpx } from './dsp.js';
 
 // tslint:disable max-classes-per-file
 export class dsp_r2FFT {

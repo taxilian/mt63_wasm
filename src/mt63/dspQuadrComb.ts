@@ -1,4 +1,4 @@
-import { dspCmpx, DspCmpxBuff, dspWinFirI, winFirQ } from './dsp';
+import { dspCmpx, DspCmpxBuff, dspWinFirI, winFirQ } from './dsp.js';
 
 export class DspQuadrComb {
   private Tap: number[] = [];

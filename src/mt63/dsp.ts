@@ -276,7 +276,7 @@ export function dspScalProd(x1OrRe: dspCmpx | number, x2OrIm: dspCmpx | number, 
 export function dspFindMaxPower(data: dspCmpx[], len: number): { power: number, index: number } {
     let maxPower = dspPower(data[0]);
     let maxIndex = 0;
-    
+
     for (let i = 1; i < len; i++) {
         const power = dspPower(data[i]);
         if (power > maxPower) {
@@ -284,30 +284,30 @@ export function dspFindMaxPower(data: dspCmpx[], len: number): { power: number, 
             maxIndex = i;
         }
     }
-    
+
     return { power: maxPower, index: maxIndex };
 }
 
-export function dspSelFitAver(data: number[], len: number, selThres: number, loops: number): { aver: number, rms: number, sel: number };
+export function dspSelFitAver(data: Float64Array, len: number, selThres: number, loops: number): { aver: number, rms: number, sel: number };
 export function dspSelFitAver(data: dspCmpx[], len: number, selThres: number, loops: number): { aver: dspCmpx, rms: number, sel: number };
 export function dspSelFitAver(
-    data: number[] | dspCmpx[],
+    data: Float64Array | dspCmpx[],
     len: number,
     selThres: number,
     loops: number
 ): { aver: number | dspCmpx, rms: number, sel: number } {
     if (len <= 0) {
-        return typeof data[0] === 'number' 
+        return typeof data[0] === 'number'
             ? { aver: 0, rms: 0, sel: 0 }
             : { aver: new dspCmpx(0, 0), rms: 0, sel: 0 };
     }
-    
+
     // Initial average
     let aver: number | dspCmpx;
     let sum = 0;
     let sumRe = 0;
     let sumIm = 0;
-    
+
     if (typeof data[0] === 'number') {
         for (let i = 0; i < len; i++) {
             sum += data[i] as number;
@@ -321,11 +321,11 @@ export function dspSelFitAver(
         }
         aver = new dspCmpx(sumRe / len, sumIm / len);
     }
-    
+
     // Iterative outlier rejection
     let sel = len;
     let rms = 0;
-    
+
     for (let loop = 0; loop < loops && sel > 0; loop++) {
         // Calculate RMS deviation
         let sumSq = 0;
@@ -343,11 +343,11 @@ export function dspSelFitAver(
             }
         }
         rms = Math.sqrt(sumSq / sel);
-        
+
         // Recalculate average excluding outliers
         const threshold = selThres * rms;
         sel = 0;
-        
+
         if (typeof aver === 'number') {
             sum = 0;
             for (let i = 0; i < len; i++) {
@@ -378,7 +378,7 @@ export function dspSelFitAver(
             }
         }
     }
-    
+
     return { aver, rms, sel };
 }
 
